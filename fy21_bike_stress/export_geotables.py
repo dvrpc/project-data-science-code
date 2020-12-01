@@ -1,8 +1,14 @@
 """
+export_geotables.py
+-------------------
+
 This script illustrates the process of saving every
 spatial table in a PostGIS database to shapefile.
 
+Users may optionally specify the list of tables to
+save manually. See "Step 3A" for directions.
 """
+
 import psycopg2
 from pathlib import Path
 from geopandas import GeoDataFrame
@@ -17,25 +23,25 @@ DB_NAME = "ucity"
 
 URI = f"postgresql://{UN}:{PW}@{HOST}:{PORT}/{DB_NAME}"
 
-# Step 2: Define where you want to save the resulting shapefiles
-# --------------------------------------------------------------
+# Step 2: Define where you want to save the resulting shapefiles.
+# ---------------------------------------------------------------
 SHP_FOLDER = Path("/Users/aaron/data")
 
 
 # Step 3A: Manually define a list of tables you want to export
-#          To do so, update the first "table_list" and
-#                    remove the 2nd one that is set to None
+#          To do so, update the "table_list" variable.
 # ------------------------------------------------------------
 
-table_list = ["first_table", "second_table"]
-table_list = None
+table_list_template = ["first_table", "second_table"]
+
+table_list = table_list_template
 
 
-# Step 3B: Get a list of all spatial tables in the database
-#          if none is defined
-# ----------------------------------------------------------
+# Step 3B: Get a list of all spatial tables in the database.
+#          Skip this if the user defined a custom "table_list"
+# ------------------------------------------------------------
 
-if not table_list:
+if table_list != table_list_template:
 
     sql_all_spatial_tables = """
         SELECT f_table_name AS tblname
@@ -61,9 +67,8 @@ print(f"Saving {len(spatial_tables)} spatial tables to shapefile")
 for table in tables:
 
     print("\t-> Saving", table)
-    query = f"""
-        SELECT * FROM {table}
-    """
+
+    query = f"SELECT * FROM {table}"
 
     connection = psycopg2.connect(URI)
 
@@ -74,4 +79,5 @@ for table in tables:
     connection.close()
 
     shp_path = SHP_FOLDER / f"{table}.shp"
+ 
     gdf.to_file(shp_path)
