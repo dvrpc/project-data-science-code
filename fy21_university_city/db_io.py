@@ -30,4 +30,3 @@ def setup(db_name: str = DB_NAME):
     stops, lines = transit_data.all_spatial_data()
 
     db.import_geodataframe(stops, "transit_stops")
-    db.import_geodataframe(lines, "transit_lines")
