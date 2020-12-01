@@ -53,7 +53,7 @@ if table_list != table_list_template:
     cursor.execute(sql_all_spatial_tables)
 
     spatial_tables = cursor.fetchall()
-    tables = [x[0] for x in spatial_tables]
+    table_list = [x[0] for x in spatial_tables]
 
     cursor.close()
     connection.close()
@@ -62,9 +62,9 @@ if table_list != table_list_template:
 # Step 4: Iterate over the list of spatial tables, save each to shapefile
 # -----------------------------------------------------------------------
 
-print(f"Saving {len(spatial_tables)} spatial tables to shapefile")
+print(f"Saving {len(table_list)} spatial tables to shapefile")
 
-for table in tables:
+for table in table_list:
 
     print("\t-> Saving", table)
 
