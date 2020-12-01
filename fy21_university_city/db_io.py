@@ -23,10 +23,13 @@ def setup(db_name: str = DB_NAME):
     apc_csv = GDRIVE_FOLDER / "Data/2019_Spring_APC_Stop_by_Route.csv"
     df = pd.read_csv(apc_csv)
     df.drop(columns=["Unnamed: 0"], inplace=True)
-    # db.import_dataframe(df, "apc_raw", if_exists="replace")
+    db.import_dataframe(df, "apc_raw", if_exists="replace")
 
     # Load regional transit stops
     transit_data = TransitData()
     stops, lines = transit_data.all_spatial_data()
-
     db.import_geodataframe(stops, "transit_stops")
+
+    # Load study area bounds
+    bounds_shp = GDRIVE_FOLDER / "Data/GIS/Draft_Study_Area_Extent/U_CIty_Study_Area_Dissolve_2.shp"
+    db.import_geodata("study_bounds", bounds_shp)
