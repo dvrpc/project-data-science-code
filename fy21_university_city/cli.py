@@ -16,6 +16,13 @@ def setup_db():
 
     db_io.setup()
 
+@click.command()
+@click.argument("table_name")
+def export_shp(table_name):
+    """ Export a spatial table to shapefile """
+
+    db_io.export_shp(table_name)
+
 
 @click.command()
 def process_apc_data():
@@ -26,6 +33,7 @@ def process_apc_data():
 
 all_commands = [
     setup_db,
+    export_shp,
     process_apc_data,
 ]
 

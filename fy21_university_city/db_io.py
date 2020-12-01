@@ -33,3 +33,12 @@ def setup(db_name: str = DB_NAME):
     # Load study area bounds
     bounds_shp = GDRIVE_FOLDER / "Data/GIS/Draft_Study_Area_Extent/U_CIty_Study_Area_Dissolve_2.shp"
     db.import_geodata("study_bounds", bounds_shp)
+
+
+def export_shp(table_to_export: str, db_name: str = DB_NAME):
+
+    db = db_connection(db_name)
+
+    export_folder = GDRIVE_FOLDER / "Data/GIS/Analysis_Exports"
+
+    db.export_shapefile(table_to_export, export_folder)
