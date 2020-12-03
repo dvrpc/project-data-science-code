@@ -1,7 +1,25 @@
 """
-Use the 2012-13 Household Travel Survey data
+process_hts_data.py
+-------------------
 
+Use the 2012-13 Household Travel Survey data
+to summarize flows between CPA geographies.
+
+This is done by:
+    - Reading the raw HTS table from SQL
+    - Creating a 'TripTable' object, which has a 'Trip' object
+      for every row of the raw data
+    - Associating each trip with the next linked trip,
+      if there is one
+    - Classifying each trip as AM, PM, or 24hr period
+      using the trip's departure time and the next trip's
+      arrival time
+    - Summarizing flows between each CPA, with a column
+      for each time period's flows
+
+Results of each step in the process are saved to the SQL database.
 """
+
 import pandas as pd
 from datetime import time
 
@@ -52,7 +70,9 @@ class Trip:
 
     def __init__(self, sql_row: tuple):
         """ Extract attributes from the SQL row.
-            Set a None placeholder for the next linked trip """
+            Set a None placeholder for the next linked trip
+        """
+
         # Capture the raw data
         self.person_id, self.trip_num, self.act_dur1, \
             self.o_cpa, self.d_cpa, self.mode_agg, self.arrive, \
@@ -90,7 +110,8 @@ class Trip:
 
     def trip_end_time(self):
         """ Return the arrival time of the next trip.
-            If a next trip has not been assigned, return None """
+            If a next trip has not been assigned, return None
+        """
 
         if self.next_trip:
             return self.next_trip.arrive
@@ -256,10 +277,15 @@ def process_hts():
 
 
 def aggregate_hts(style="all_modes_combined"):
+    """ Use the 'processed' version of the HTS table to summarize the flows.
+
+        Using the 'style' parameter, you can:
+            - aggregate by mode using 'by_mode'
+            - aggregate without considering mode,
+              using the default 'all_modes_combined'
     """
 
-    """
-    def use_the_right_query(style: str, query: str) -> str:
+    def _use_the_right_query(style: str, query: str) -> str:
         """ Add 'mode_agg' into the query if the 'style' is 'by_mode' """
         if style == "by_mode":
             return query.replace("o_cpa, d_cpa", "o_cpa, d_cpa, mode_agg")
@@ -306,9 +332,9 @@ def aggregate_hts(style="all_modes_combined"):
     """
 
     # Add the 'mode_agg' column if the 'style' is 'by_mode'
-    all_combos_query = use_the_right_query(style, all_combos_query)
-    am_query = use_the_right_query(style, am_query)
-    pm_query = use_the_right_query(style, pm_query)
+    all_combos_query = _use_the_right_query(style, all_combos_query)
+    am_query = _use_the_right_query(style, am_query)
+    pm_query = _use_the_right_query(style, pm_query)
 
     # Also, join on the 'mode_agg' column if we're analyzing 'by_mode'
     join_cols = ["o_cpa", "d_cpa"]
