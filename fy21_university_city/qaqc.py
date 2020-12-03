@@ -12,7 +12,7 @@ def main(qa_name: str):
     qa_folder = GDRIVE_FOLDER / "Data/QAQC"
 
     qa_routines = {
-        "apc_with_null_latlngs": """ 
+        "apc_with_null_latlngs": """
                     select
                         route_id,
                         stop_id,
@@ -27,7 +27,20 @@ def main(qa_name: str):
                         stop_lon is null
                     group by
                         route_id, stop_id, stop_name, stop_lat, stop_lon
-                    order by route_id, (sum(hourly_ons) + sum(hourly_offs)) desc
+                    order by
+                        route_id,
+                        (sum(hourly_ons) + sum(hourly_offs)) desc
+                """,
+        "hts_with_two_null_cpas": """
+                    select *
+                    from
+                        hts_2013_processed
+                    where
+                        o_cpa is null
+                      and
+                        d_cpa is null
+                    order by
+                        person_id, trip_num
                 """,
     }
 
