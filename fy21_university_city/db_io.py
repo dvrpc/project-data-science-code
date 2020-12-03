@@ -1,7 +1,5 @@
-from pathlib import Path
 import pandas as pd
 
-import postgis_helpers as pGIS
 from postgis_helpers import PostgreSQL
 
 from philly_transit_data import TransitData
@@ -34,12 +32,14 @@ def setup(db_name: str = DB_NAME):
 
     # Load study area bounds
     if "study_bounds" not in all_tables:
-        bounds_shp = GDRIVE_FOLDER / "Data/GIS/Draft_Study_Area_Extent/U_CIty_Study_Area_Dissolve_2.shp"
+        bounds_shp = GDRIVE_FOLDER / "Data/GIS/Draft_Study_Area_Extent" \
+                    / "U_CIty_Study_Area_Dissolve_2.shp"
         db.import_geodata("study_bounds", bounds_shp)
 
     # Load the 2013 HTS Trip table
     if "hts_2013_trips" not in all_tables:
-        hts_xlsx = GDRIVE_FOLDER / "Data/PublicUse/export_from_access_db_4_Trip_Public.xlsx"
+        hts_xlsx = GDRIVE_FOLDER / "Data/PublicUse " \
+                    / "export_from_access_db_4_Trip_Public.xlsx"
         df = pd.read_excel(hts_xlsx)
         db.import_dataframe(df, "hts_2013_trips")
 
@@ -48,6 +48,18 @@ def export_shp(table_to_export: str, db_name: str = DB_NAME):
 
     db = db_connection(db_name)
 
-    export_folder = GDRIVE_FOLDER / "Data/GIS/Analysis_Exports"
+    export_folder = GDRIVE_FOLDER / "Data/Analysis_Exports"
 
     db.export_shapefile(table_to_export, export_folder)
+
+
+def export_table(table_to_export: str, db_name: str = DB_NAME):
+
+    db = db_connection(db_name)
+
+    export_folder = GDRIVE_FOLDER / "Data/Analysis_Exports"
+
+    df = db.query_as_df(f"SELECT * FROM {table_to_export}")
+
+    filepath = export_folder / f"{table_to_export}.xlsx"
+    df.to_excel(filepath)
