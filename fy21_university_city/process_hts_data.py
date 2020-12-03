@@ -136,7 +136,7 @@ class Trip:
         # If there's a next_trip, check its arrival time (if it's usable)
         if self.next_trip:
             if self.next_trip.time_is_usable(which="arrive"):
-                trip_end_time = text_to_time(self.next_trip.arrive)
+                trip_end_time = text_to_time(self.trip_end_time())
                 times_to_check.append(trip_end_time)
 
         # Check all usable times and add the classification if
