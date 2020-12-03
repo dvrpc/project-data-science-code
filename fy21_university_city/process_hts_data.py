@@ -8,6 +8,18 @@ from datetime import time
 from fy21_university_city.db_io import db_connection
 
 
+mode_codes = {
+    1:  "Walk",
+    2:  "Bike",
+    3:  "Private Vehicle",
+    4:  "Private Transit",
+    5:  "Public Transit",
+    6:  "School Bus",
+    7:  "Other",
+    None: "not provided"
+}
+
+
 def time_is_between(the_time: time, start_hr: int, end_hr: int) -> bool:
     """ Return True if 'the_time' is between a given start and end hour """
     return time(start_hr) <= the_time < time(end_hr)
@@ -41,11 +53,16 @@ class Trip:
     def __init__(self, sql_row: tuple):
         """ Extract attributes from the SQL row.
             Set a None placeholder for the next linked trip """
+        # Capture the raw data
         self.person_id, self.trip_num, self.act_dur1, \
             self.o_cpa, self.d_cpa, self.mode_agg, self.arrive, \
             self.depart, self.compositeweight = sql_row
 
+        # Make a placeholder for the next linked trip
         self.next_trip = None
+
+        # Replace the mode code with readable text
+        self.mode_agg = mode_codes[self.mode_agg]
 
     @property
     def identifier(self):
@@ -113,14 +130,16 @@ class Trip:
 
         return str(set(windows))
 
-     def raw_data(self):
+    def raw_data(self):
         """ Return all of the attributes passed into the object as a list """
         return [self.person_id, self.trip_num, self.act_dur1,
                 self.o_cpa, self.d_cpa, self.mode_agg, self.arrive,
                 self.depart, self.compositeweight]
 
     def output_data(self):
-        """ Append the raw data with the window classification and next trip arrival time"""
+        """ Append the raw data with the window classification
+            and next trip arrival time
+        """
         data = self.raw_data() + [self.trip_end_time(), self.time_window()]
         return data
 
@@ -138,7 +157,7 @@ class TripTable:
 
         >>> t1 = Trip(...)
         >>> t2 = Trip(...)
-        >>> t1.next_trip = t2 
+        >>> t1.next_trip = t2
 
     """
 
@@ -202,16 +221,17 @@ class TripTable:
         df = pd.DataFrame(data, columns=header)
         return df
 
+
 def process_hts():
     """ Process the trip table by finding the next linked trip
         and classifying whether the trip falls into the AM or PM
         peak periods.
 
-        The resulting table is saved back to SQL named 'hts_2013_processed' 
+        The resulting table is saved back to SQL named 'hts_2013_processed'
     """
 
     db = db_connection()
-    
+
     # Get a basic table out of SQL
     query = """
         select
@@ -245,7 +265,6 @@ def aggregate_hts(style="all_modes_combined"):
             return query.replace("o_cpa, d_cpa", "o_cpa, d_cpa, mode_agg")
         else:
             return query
-
 
     db = db_connection()
 
@@ -296,7 +315,6 @@ def aggregate_hts(style="all_modes_combined"):
     if style == "by_mode":
         join_cols.append("mode_agg")
 
-
     # Get the 24-hour totals
     df = db.query_as_df(all_combos_query)
 
@@ -309,7 +327,8 @@ def aggregate_hts(style="all_modes_combined"):
     df = pd.merge(df, df_pm, how="left", on=join_cols)
 
     # Save the resulting dataframe back to SQL
-    db.import_dataframe(df, f"hts_2013_aggregated_{style}", if_exists="replace")
+    new_table_name = f"hts_2013_aggregated_{style}"
+    db.import_dataframe(df, new_table_name, if_exists="replace")
 
 
 def main():
