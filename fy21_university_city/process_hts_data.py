@@ -37,6 +37,14 @@ mode_codes = {
     None: "not provided"
 }
 
+loc_type_codes = {
+    1: "Home",
+    2: "Work",
+    3: "Other",  # number 3 is actually 'school'
+    4: "Other",
+    None: "not provided"
+}
+
 
 def time_is_between(the_time: time, start_hr: int, end_hr: int) -> bool:
     """ Return True if 'the_time' is between a given start and end hour """
@@ -76,7 +84,8 @@ class Trip:
         # Capture the raw data
         self.person_id, self.trip_num, self.act_dur1, \
             self.o_cpa, self.d_cpa, self.mode_agg, self.arrive, \
-            self.depart, self.compositeweight = sql_row
+            self.depart, self.o_loc_type, self.d_loc_type, \
+            self.compositeweight = sql_row
 
         # Make a placeholder for the next linked trip
         self.next_trip = None
@@ -88,6 +97,17 @@ class Trip:
     def identifier(self):
         """ ID is person's ID and the trip sequence number """
         return f"{self.person_id}_{self.trip_num}"
+
+    @property
+    def trip_type(self):
+        """ Return a trip type using the O & D location types """
+        o_txt = loc_type_codes[self.o_loc_type]
+        d_txt = loc_type_codes[self.d_loc_type]
+
+        if "Home" in [o_txt, d_txt]:
+            return f"{o_txt} to {d_txt}"
+        else:
+            return "Non-home"
 
     def __repr__(self):
         """ This is what the class looks like when you print() it """
@@ -158,10 +178,11 @@ class Trip:
                 self.depart, self.compositeweight]
 
     def output_data(self):
-        """ Append the raw data with the window classification
-            and next trip arrival time
+        """ Append the raw data with the window classification,
+            next trip arrival time, and the trip type
         """
-        data = self.raw_data() + [self.trip_end_time(), self.time_window()]
+        new_data = [self.trip_end_time(), self.time_window(), self.trip_type]
+        data = self.raw_data() + new_data
         return data
 
 
@@ -230,7 +251,7 @@ class TripTable:
         header = ["person_id", "trip_num", "act_dur1",
                   "o_cpa", "d_cpa", "mode_agg", "arrive",
                   "depart", "compositeweight", "trip_end_time",
-                  "time_window"]
+                  "time_window", "trip_type"]
 
         data = []
 
@@ -258,7 +279,7 @@ def process_hts():
         select
             person_id, trip_num, act_dur1,
             o_cpa, d_cpa, mode_agg, arrive,
-            depart, compositeweight
+            depart, o_loc_type, d_loc_type, compositeweight
         from
             hts_2013_trips
         order by
@@ -281,14 +302,28 @@ def aggregate_hts(style="all_modes_combined"):
 
         Using the 'style' parameter, you can:
             - aggregate by mode using 'by_mode'
+            - aggregate by mode and o&d location
+              types using 'by_mode_and_location_type'
             - aggregate without considering mode,
               using the default 'all_modes_combined'
     """
 
     def _use_the_right_query(style: str, query: str) -> str:
-        """ Add 'mode_agg' into the query if the 'style' is 'by_mode' """
+        """ If the 'style' is 'by_mode':
+                - add 'mode_agg' into the query
+            
+            If the 'style' is 'by_mode_and_location_type':
+                - add 'trip_type' and 'mode_agg' into the query
+
+            Otherwise, just return the query as it was originally.
+        """
+
         if style == "by_mode":
             return query.replace("o_cpa, d_cpa", "o_cpa, d_cpa, mode_agg")
+
+        elif style == "by_mode_and_location_type":
+            return query.replace("o_cpa, d_cpa", "o_cpa, d_cpa, mode_agg, trip_type")
+
         else:
             return query
 
@@ -341,6 +376,10 @@ def aggregate_hts(style="all_modes_combined"):
     if style == "by_mode":
         join_cols.append("mode_agg")
 
+    elif style == "by_mode_and_location_type":
+        join_cols.append("mode_agg")
+        join_cols.append("trip_type")
+
     # Get the 24-hour totals
     df = db.query_as_df(all_combos_query)
 
@@ -363,5 +402,6 @@ def main():
         2) O to D, with a distinct row for each mode
     """
     process_hts()
-    aggregate_hts(style="all_modes_combined")
-    aggregate_hts(style="by_mode")
+    # aggregate_hts(style="all_modes_combined")
+    # aggregate_hts(style="by_mode")
+    aggregate_hts(style="by_mode_and_location_type")
