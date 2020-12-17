@@ -28,8 +28,7 @@ Analyze the raw [Household Travel Survey (2012-2013)](https://www2.dvrpc.org/Rep
 
 ```
 ucity process-hts-data
-ucity export-table hts_2013_aggregated_by_mode
-ucity export-table hts_2013_aggregated_all_modes_combined
+ucity export-table hts_2013_aggregated_by_mode_and_location_type
 ```
 
 ## QAQC
