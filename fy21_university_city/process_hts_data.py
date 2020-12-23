@@ -27,14 +27,14 @@ from fy21_university_city.db_io import db_connection
 
 
 mode_codes = {
-    1:  "Walk",
-    2:  "Bike",
-    3:  "Private Vehicle",
-    4:  "Private Transit",
-    5:  "Public Transit",
-    6:  "School Bus",
-    7:  "Other",
-    None: "not provided"
+    1: "Walk",
+    2: "Bike",
+    3: "Private Vehicle",
+    4: "Private Transit",
+    5: "Public Transit",
+    6: "School Bus",
+    7: "Other",
+    None: "not provided",
 }
 
 loc_type_codes = {
@@ -42,7 +42,7 @@ loc_type_codes = {
     2: "Work",
     3: "Other",  # number 3 is actually 'school'
     4: "Other",
-    None: "not provided"
+    None: "not provided",
 }
 
 
@@ -58,34 +58,43 @@ def text_to_time(txt: str) -> time:
 
 
 class Trip:
-    """ The 'Trip' class abstracts a single trip:
+    """The 'Trip' class abstracts a single trip:
 
-            - It contains a selected set of columns for each row in
-              the raw table named 'hts_2013_trips'
+    - It contains a selected set of columns for each row in
+      the raw table named 'hts_2013_trips'
 
-            - If the departure time is usable, the time window of
-              the trip gets classified using 'Trip.time_window()'
+    - If the departure time is usable, the time window of
+      the trip gets classified using 'Trip.time_window()'
 
-            - If a 'next_trip' is assigned, the 'Trip.time_window()'
-              function will also consider the end time of the trip
+    - If a 'next_trip' is assigned, the 'Trip.time_window()'
+      function will also consider the end time of the trip
 
-            - For a trip to be classified as 'AM' or 'PM', the trip's
-              departure time or trip end time (or both) must be between
-              the period bookends.
-                -> 'AM' is 7 to 10am
-                -> 'PM' is 3 to 7pm
+    - For a trip to be classified as 'AM' or 'PM', the trip's
+      departure time or trip end time (or both) must be between
+      the period bookends.
+        -> 'AM' is 7 to 10am
+        -> 'PM' is 3 to 7pm
     """
 
     def __init__(self, sql_row: tuple):
-        """ Extract attributes from the SQL row.
-            Set a None placeholder for the next linked trip
+        """Extract attributes from the SQL row.
+        Set a None placeholder for the next linked trip
         """
 
         # Capture the raw data
-        self.person_id, self.trip_num, self.act_dur1, \
-            self.o_cpa, self.d_cpa, self.mode_agg, self.arrive, \
-            self.depart, self.o_loc_type, self.d_loc_type, \
-            self.compositeweight = sql_row
+        (
+            self.person_id,
+            self.trip_num,
+            self.act_dur1,
+            self.o_cpa,
+            self.d_cpa,
+            self.mode_agg,
+            self.arrive,
+            self.depart,
+            self.o_loc_type,
+            self.d_loc_type,
+            self.compositeweight,
+        ) = sql_row
 
         # Make a placeholder for the next linked trip
         self.next_trip = None
@@ -129,8 +138,8 @@ class Trip:
             return True
 
     def trip_end_time(self):
-        """ Return the arrival time of the next trip.
-            If a next trip has not been assigned, return None
+        """Return the arrival time of the next trip.
+        If a next trip has not been assigned, return None
         """
 
         if self.next_trip:
@@ -139,11 +148,11 @@ class Trip:
             return None
 
     def time_window(self):
-        """ Using the departure time and the next trip's arrival time,
-            identify whether the trip overlaps the AM and/or PM windows.
+        """Using the departure time and the next trip's arrival time,
+        identify whether the trip overlaps the AM and/or PM windows.
 
-            All trips also get classified as '24 HR', regardless of whether
-            or not the time value is usable. (Many are NULL, or 9999/9997/etc.)
+        All trips also get classified as '24 HR', regardless of whether
+        or not the time value is usable. (Many are NULL, or 9999/9997/etc.)
         """
 
         times_to_check = []
@@ -161,7 +170,7 @@ class Trip:
 
         # Check all usable times and add the classification if
         # the time is between 6-10 and/or 15-19
-        windows = ['24 HR']
+        windows = ["24 HR"]
         for t in times_to_check:
             if time_is_between(t, 6, 10):
                 windows.append("AM period (6-10)")
@@ -173,13 +182,21 @@ class Trip:
 
     def raw_data(self):
         """ Return all of the attributes passed into the object as a list """
-        return [self.person_id, self.trip_num, self.act_dur1,
-                self.o_cpa, self.d_cpa, self.mode_agg, self.arrive,
-                self.depart, self.compositeweight]
+        return [
+            self.person_id,
+            self.trip_num,
+            self.act_dur1,
+            self.o_cpa,
+            self.d_cpa,
+            self.mode_agg,
+            self.arrive,
+            self.depart,
+            self.compositeweight,
+        ]
 
     def output_data(self):
-        """ Append the raw data with the window classification,
-            next trip arrival time, and the trip type
+        """Append the raw data with the window classification,
+        next trip arrival time, and the trip type
         """
         new_data = [self.trip_end_time(), self.time_window(), self.trip_type]
         data = self.raw_data() + new_data
@@ -187,26 +204,26 @@ class Trip:
 
 
 class TripTable:
-    """ The 'TripTable' class abstracts the entire trip dataset.
+    """The 'TripTable' class abstracts the entire trip dataset.
 
-        A list of tuples is passed into the class. Using this data,
-        a 'Trip' object is created for each tuple (i.e. row).
+    A list of tuples is passed into the class. Using this data,
+    a 'Trip' object is created for each tuple (i.e. row).
 
-        For each person_id, all trip_num values are collected,
-        and each trip gets associated with its next trip, if it exists.
+    For each person_id, all trip_num values are collected,
+    and each trip gets associated with its next trip, if it exists.
 
-        This is done via the 'next_trip' attribute in the 'Trip' class:
+    This is done via the 'next_trip' attribute in the 'Trip' class:
 
-        >>> t1 = Trip(...)
-        >>> t2 = Trip(...)
-        >>> t1.next_trip = t2
+    >>> t1 = Trip(...)
+    >>> t2 = Trip(...)
+    >>> t1.next_trip = t2
 
     """
 
     def __init__(self, list_of_rows: list):
-        """ Read the raw data into 'Trip' objects,
-            for each Trip figure what the next linked trip is,
-            and associate it back to the Trip.
+        """Read the raw data into 'Trip' objects,
+        for each Trip figure what the next linked trip is,
+        and associate it back to the Trip.
         """
 
         # For each tuple in the list_of_rows, make a 'Trip' object
@@ -245,13 +262,23 @@ class TripTable:
                         this_trip.next_trip = self.trips[next_trip_id]
 
     def new_table(self) -> pd.DataFrame:
-        """ Extract the time window and next trip arrival time for each row,
-            and return as a dataframe.
+        """Extract the time window and next trip arrival time for each row,
+        and return as a dataframe.
         """
-        header = ["person_id", "trip_num", "act_dur1",
-                  "o_cpa", "d_cpa", "mode_agg", "arrive",
-                  "depart", "compositeweight", "trip_end_time",
-                  "time_window", "trip_type"]
+        header = [
+            "person_id",
+            "trip_num",
+            "act_dur1",
+            "o_cpa",
+            "d_cpa",
+            "mode_agg",
+            "arrive",
+            "depart",
+            "compositeweight",
+            "trip_end_time",
+            "time_window",
+            "trip_type",
+        ]
 
         data = []
 
@@ -265,11 +292,11 @@ class TripTable:
 
 
 def process_hts():
-    """ Process the trip table by finding the next linked trip
-        and classifying whether the trip falls into the AM or PM
-        peak periods.
+    """Process the trip table by finding the next linked trip
+    and classifying whether the trip falls into the AM or PM
+    peak periods.
 
-        The resulting table is saved back to SQL named 'hts_2013_processed'
+    The resulting table is saved back to SQL named 'hts_2013_processed'
     """
 
     db = db_connection()
@@ -298,24 +325,24 @@ def process_hts():
 
 
 def aggregate_hts(style="all_modes_combined"):
-    """ Use the 'processed' version of the HTS table to summarize the flows.
+    """Use the 'processed' version of the HTS table to summarize the flows.
 
-        Using the 'style' parameter, you can:
-            - aggregate by mode using 'by_mode'
-            - aggregate by mode and o&d location
-              types using 'by_mode_and_location_type'
-            - aggregate without considering mode,
-              using the default 'all_modes_combined'
+    Using the 'style' parameter, you can:
+        - aggregate by mode using 'by_mode'
+        - aggregate by mode and o&d location
+          types using 'by_mode_and_location_type'
+        - aggregate without considering mode,
+          using the default 'all_modes_combined'
     """
 
     def _use_the_right_query(style: str, query: str) -> str:
-        """ If the 'style' is 'by_mode':
-                - add 'mode_agg' into the query
-            
-            If the 'style' is 'by_mode_and_location_type':
-                - add 'trip_type' and 'mode_agg' into the query
+        """If the 'style' is 'by_mode':
+            - add 'mode_agg' into the query
 
-            Otherwise, just return the query as it was originally.
+        If the 'style' is 'by_mode_and_location_type':
+            - add 'trip_type' and 'mode_agg' into the query
+
+        Otherwise, just return the query as it was originally.
         """
 
         if style == "by_mode":
@@ -397,9 +424,9 @@ def aggregate_hts(style="all_modes_combined"):
 
 
 def main():
-    """ Process the HTS data, and then aggregate twice:
-        1) O to D, with all modes combined
-        2) O to D, with a distinct row for each mode
+    """Process the HTS data, and then aggregate twice:
+    1) O to D, with all modes combined
+    2) O to D, with a distinct row for each mode
     """
     process_hts()
     # aggregate_hts(style="all_modes_combined")

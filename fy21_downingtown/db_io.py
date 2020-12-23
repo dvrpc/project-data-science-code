@@ -22,7 +22,7 @@ def setup(db_name: str = DB_NAME):
 
     gdf_bounds_buffer = gdf_bounds.copy()
 
-    gdf_bounds_buffer['geometry'] = gdf_bounds.geometry.buffer(five_miles_in_meters)
+    gdf_bounds_buffer["geometry"] = gdf_bounds.geometry.buffer(five_miles_in_meters)
 
     # Get all OSM road features
     polygon = gdf_bounds_buffer.to_crs("EPSG:4326").geometry[0]
@@ -41,11 +41,11 @@ def setup(db_name: str = DB_NAME):
     db.table_reproject_spatial_data(f"osm_nodes", 4326, 26918, "POINT")
 
     # Make a uuid column
-    make_id_query = f'''
+    make_id_query = f"""
         CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
         alter table osm_edges add column osmuuid uuid;
         update osm_edges set osmuuid = uuid_generate_v4();
-    '''
+    """
     db.execute(make_id_query)
 
 

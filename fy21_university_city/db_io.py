@@ -32,14 +32,20 @@ def setup(db_name: str = DB_NAME):
 
     # Load study area bounds
     if "study_bounds" not in all_tables:
-        bounds_shp = GDRIVE_FOLDER / "Data/GIS/Draft_Study_Area_Extent" \
-                    / "U_CIty_Study_Area_Dissolve_2.shp"
+        bounds_shp = (
+            GDRIVE_FOLDER
+            / "Data/GIS/Draft_Study_Area_Extent"
+            / "U_CIty_Study_Area_Dissolve_2.shp"
+        )
         db.import_geodata("study_bounds", bounds_shp)
 
     # Load the 2013 HTS Trip table
     if "hts_2013_trips" not in all_tables:
-        hts_xlsx = GDRIVE_FOLDER / "Data/PublicUse " \
-                    / "export_from_access_db_4_Trip_Public.xlsx"
+        hts_xlsx = (
+            GDRIVE_FOLDER
+            / "Data/PublicUse "
+            / "export_from_access_db_4_Trip_Public.xlsx"
+        )
         df = pd.read_excel(hts_xlsx)
         db.import_dataframe(df, "hts_2013_trips")
 

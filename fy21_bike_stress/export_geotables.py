@@ -72,12 +72,10 @@ for table in table_list:
 
     connection = psycopg2.connect(URI)
 
-    gdf = GeoDataFrame.from_postgis(query,
-                                    connection,
-                                    geom_col="geom")
+    gdf = GeoDataFrame.from_postgis(query, connection, geom_col="geom")
 
     connection.close()
 
     shp_path = SHP_FOLDER / f"{table}.shp"
- 
+
     gdf.to_file(shp_path)
