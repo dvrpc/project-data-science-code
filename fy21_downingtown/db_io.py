@@ -33,15 +33,15 @@ def setup(db_name: str = DB_NAME):
     db.import_geodataframe(gdf_bounds, "boundary")
     db.import_geodataframe(gdf_bounds_buffer, "boundary_5mi_buffer")
 
-    db.import_geodataframe(edges, f"osm_edges")
-    db.import_geodataframe(nodes, f"osm_nodes")
+    db.import_geodataframe(edges, "osm_edges")
+    db.import_geodataframe(nodes, "osm_nodes")
 
     # Reproject from 4326 to 26918 to facilitate analysis queries
-    db.table_reproject_spatial_data(f"osm_edges", 4326, 26918, "LINESTRING")
-    db.table_reproject_spatial_data(f"osm_nodes", 4326, 26918, "POINT")
+    db.table_reproject_spatial_data("osm_edges", 4326, 26918, "LINESTRING")
+    db.table_reproject_spatial_data("osm_nodes", 4326, 26918, "POINT")
 
     # Make a uuid column
-    make_id_query = f"""
+    make_id_query = """
         CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
         alter table osm_edges add column osmuuid uuid;
         update osm_edges set osmuuid = uuid_generate_v4();
