@@ -4,6 +4,7 @@ from fy21_university_city import db_io
 from fy21_university_city import process_apc_data as apc
 from fy21_university_city import process_hts_data as hts
 from fy21_university_city import qaqc as qa
+from fy21_university_city import process_urbansim_data as urbansim
 
 
 @click.group()
@@ -51,6 +52,12 @@ def process_hts_data():
     hts.main()
 
 
+@click.command()
+def process_urbansim_data():
+    """ Work with UrbanSim parcel & development data """
+    urbansim.main()
+
+
 all_commands = [
     setup_db,
     export_shp,
@@ -58,6 +65,7 @@ all_commands = [
     qaqc,
     process_apc_data,
     process_hts_data,
+    process_urbansim_data,
 ]
 
 for cmd in all_commands:

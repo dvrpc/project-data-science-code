@@ -1,9 +1,11 @@
 # University City Multimodal Capacity Study
 
 > Project # 21-52-100
-___
+
+---
 
 ## Database setup
+
 Spin up a new PostgreSQL database and import the necessary source datasets.
 
 This will only work if your GoogleDrive is mapped to include `U_City_FY_21`
@@ -31,17 +33,25 @@ ucity process-hts-data
 ucity export-table hts_2013_aggregated_by_mode_and_location_type
 ```
 
+## UrbanSim data
+
+Import regional parcel shapefile along with CSV containing development info. Use SQL to join the two tables, and then export a shapefile of the result.
+
+```
+ucity process-urbansim-data
+```
+
 ## QAQC
 
 Generate an Excel spreadsheet for all pre-defined QAQC processes:
 
--  APC records with null lat/long values:
+- APC records with null lat/long values:
 
 ```
 ucity qaqc apc_with_null_latlngs
 ```
 
--  HTS trips with null values for both CPAs:
+- HTS trips with null values for both CPAs:
 
 ```
 ucity qaqc hts_with_two_null_cpas

@@ -12,8 +12,7 @@ import pg_data_etl as pg
 from fy21_university_city import GDRIVE_FOLDER
 
 
-if __name__ == "__main__":
-
+def main():
     # Connect to PostgreSQL database and ensure it exists
     db = pg.Database("ucity_urbansim", **pg.connections["localhost"])
     db.create_db()
@@ -44,3 +43,7 @@ if __name__ == "__main__":
     # Export the joined data to GoogleDrive as a shapefile
     output_shp = GDRIVE_FOLDER / "GIS" / "parcels_post_join" / "project_parcels.shp"
     db.ogr2ogr_export("project_parcels", output_shp)
+
+
+if __name__ == "__main__":
+    main()
