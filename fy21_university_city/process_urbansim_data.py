@@ -6,7 +6,6 @@ Import regional parcel data and CSV with upcoming development projects.
 
 Join the two tables together, and then save result to database & shapefile.
 """
-import geopandas as gpd
 import pg_data_etl as pg
 from tqdm import tqdm
 
@@ -30,33 +29,51 @@ def main():
         development_table_path = GDRIVE_FOLDER / "GIS" / "all_devprojects_2021_03_15.csv"
         db.import_tabular_file(development_table_path, "projects")
 
+    if "public.study_area" not in db.spatial_table_list():
+        study_bounds_shp = (
+            GDRIVE_FOLDER
+            / "Data"
+            / "GIS"
+            / "Draft_Study_Area_Extent"
+            / "U_CIty_Study_Area_Dissolve_2.shp"
+        )
+        db.shp2pgsql(study_bounds_shp, 26918, "study_area")
+
     print("Joining data")
 
     query = """
     drop table if exists grouped_projects;
-    create table grouped_projects as
-        with temptable as (
-            select
-                project_id,
-                parcel_id,
-                case when building_type like '%%family%%' then 'Residential'
-                    when building_type like '%%etail%%' then 'Retail'
-                    else 'Other uses' end as typology,
-                case when start_year <= 2045 then 'Model timeline'
-                    else 'Post model (2046+)' end as timeline,
-                residential_units,
-                non_res_sqft
-            from projects
-            where start_year > 2020
-        )
+    drop table if exists projects_to_map;
+
+    create table projects_to_map as
         select
+            project_id,
+            name,
+            address,
+            parcel_id,
+            case when building_type like '%%family%%' then 'Residential'
+                when building_type like '%%etail%%' then 'Retail'
+                else 'Other uses' end as typology,
+            case when start_year <= 2035 then 'Short-term'
+                when start_year <= 2045 then 'Long-term'
+                else 'Post model (2046+)' end as timeline,
+            residential_units,
+            non_res_sqft
+        from projects
+        where start_year > 2020;
+
+    create table grouped_projects as
+        select
+            string_agg(project_id::text, ';') as project_ids,
+            string_agg(name, ';') as names,
+            string_agg(address, ';') as addresses,
             parcel_id,
             typology,
             timeline,
             sum(residential_units) as res_units,
             sum(non_res_sqft) as non_res_sqft
-        from temptable
-        group by parcel_id, typology, timeline
+        from projects_to_map
+        group by parcel_id, typology, timeline;
     """
     db.execute_via_psycopg2(query)
     db.execute_via_psycopg2(
@@ -88,28 +105,16 @@ def main():
 
     print("Exporting to shp")
 
-    # Export the joined data to GoogleDrive as a shapefile
     output_folder = GDRIVE_FOLDER / "GIS" / "parcels_post_join"
-    output_shp = output_folder / "grouped_projects.shp"
-    db.ogr2ogr_export("grouped_projects", output_shp)
+    output_shp = output_folder / "study_area_grouped_projects.shp"
 
-    # Create a version of the data that includes parcels within the study area, as centroids
-    study_bounds_shp = (
-        GDRIVE_FOLDER
-        / "Data"
-        / "GIS"
-        / "Draft_Study_Area_Extent"
-        / "U_CIty_Study_Area_Dissolve_2.shp"
-    )
-    bounds_gdf = gpd.read_file(study_bounds_shp)
-    project_gdf = gpd.read_file(output_shp)
-
-    # Filter parcels to those that intersect the study bounds
-    intersection_filter = project_gdf.intersects(bounds_gdf.unary_union)
-    filtered_projects = project_gdf[intersection_filter]
-
-    # Save intersecting parcels to shp
-    filtered_projects.to_file(output_folder / "study_area_grouped_projects.shp")
+    q = """
+        select *
+        from grouped_projects
+        where st_within(geom, (select st_collect(geom) from study_area sa))
+    """
+    output_data = db.query(q, geo=True)
+    output_data.gdf.to_file(output_shp)
 
 
 if __name__ == "__main__":
