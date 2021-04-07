@@ -5,6 +5,7 @@ from fy21_university_city import process_apc_data as apc
 from fy21_university_city import process_hts_data as hts
 from fy21_university_city import qaqc as qa
 from fy21_university_city import process_urbansim_data as urbansim
+from fy21_university_city import process_bus_data as bus
 
 
 @click.group()
@@ -58,6 +59,12 @@ def process_urbansim_data():
     urbansim.main()
 
 
+@click.command()
+def process_bus_data():
+    """Use SEPTA's ridership data to aggregate to street intersections """
+    bus.main()
+
+
 all_commands = [
     setup_db,
     export_shp,
@@ -66,6 +73,7 @@ all_commands = [
     process_apc_data,
     process_hts_data,
     process_urbansim_data,
+    process_bus_data,
 ]
 
 for cmd in all_commands:
