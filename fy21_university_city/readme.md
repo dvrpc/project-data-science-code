@@ -41,6 +41,14 @@ Import regional parcel shapefile along with CSV containing development info. Use
 ucity process-urbansim-data
 ```
 
+## Bus ridership data
+
+Transform stop-level bus ridership data into an intersection-based aggregation. Output is a shapefile that can then be visualized on a map.
+
+```
+ucity process-bus-data
+```
+
 ## QAQC
 
 Generate an Excel spreadsheet for all pre-defined QAQC processes:
