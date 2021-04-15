@@ -11,5 +11,6 @@ setup(
         [console_scripts]
         ucity=fy21_university_city.cli:main
         downingtown=fy21_downingtown.cli:main
+        sidewalk=fy21_sidewalk_data.cli:main
     """,
 )
