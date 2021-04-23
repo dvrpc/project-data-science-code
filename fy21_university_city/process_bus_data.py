@@ -33,18 +33,26 @@ def prep_data(db: PostgreSQL):
     # -------------------------------------------------------
     point_query = """
         with raw as (
-            select fnode_, tnode_, st_startpoint(geom) as startpoint, st_endpoint(geom) as endpoint
+            select
+                st_startpoint(geom) as startpoint,
+                st_endpoint(geom) as endpoint
             from philly_streets
-            where st_intersects(geom, (select st_collect(geom) from study_bounds))
+            where
+                st_intersects(
+                    geom,
+                    (select st_collect(geom) from study_bounds)
+                )
         ),
         merged_data as (
-            select fnode_ as nodeid, startpoint as geom from raw
+            select startpoint as geom from raw
             union
-            select tnode_ as nodeid, endpoint as geom from raw
+            select endpoint as geom from raw
         )
-        select nodeid, geom
+        select
+            row_number() over() as streetnodeid,
+            geom
         from merged_data
-        group by nodeid, geom
+        group by geom
     """
     db.make_geotable_from_query(point_query, "street_nodes", "POINT", 26918)
 
@@ -69,7 +77,7 @@ def prep_data(db: PostgreSQL):
         gid = row[0]
         query = f"""
             select
-                n.nodeid
+                n.streetnodeid
             from
                 septa_bus_stops_fall_2019 s,
                 street_nodes n
@@ -121,7 +129,7 @@ def export_data(db: PostgreSQL):
         left join
             street_nodes n
         on
-            n.nodeid = d.nearest_node
+            n.streetnodeid = d.nearest_node
     """
     gdf = db.query_as_geo_df(join_query)
 
