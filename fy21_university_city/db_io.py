@@ -1,6 +1,7 @@
 import pandas as pd
 
-from postgis_helpers import PostgreSQL
+from postgis_helpers import PostgreSQL, configurations
+
 
 from philly_transit_data import TransitData
 
@@ -8,7 +9,7 @@ from fy21_university_city import DB_NAME, GDRIVE_FOLDER
 
 
 def db_connection(db_name: str = DB_NAME) -> PostgreSQL:
-    return PostgreSQL(db_name, verbosity="minimal")
+    return PostgreSQL(db_name, verbosity="minimal", **configurations()["localhost"])
 
 
 def setup(db_name: str = DB_NAME):
@@ -33,19 +34,13 @@ def setup(db_name: str = DB_NAME):
     # Load study area bounds
     if "study_bounds" not in all_tables:
         bounds_shp = (
-            GDRIVE_FOLDER
-            / "Data/GIS/Draft_Study_Area_Extent"
-            / "U_CIty_Study_Area_Dissolve_2.shp"
+            GDRIVE_FOLDER / "Data/GIS/Draft_Study_Area_Extent" / "U_CIty_Study_Area_Dissolve_2.shp"
         )
         db.import_geodata("study_bounds", bounds_shp)
 
     # Load the 2013 HTS Trip table
     if "hts_2013_trips" not in all_tables:
-        hts_xlsx = (
-            GDRIVE_FOLDER
-            / "Data/PublicUse "
-            / "export_from_access_db_4_Trip_Public.xlsx"
-        )
+        hts_xlsx = GDRIVE_FOLDER / "Data/PublicUse " / "export_from_access_db_4_Trip_Public.xlsx"
         df = pd.read_excel(hts_xlsx)
         db.import_dataframe(df, "hts_2013_trips")
 
