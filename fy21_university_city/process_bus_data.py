@@ -56,6 +56,9 @@ def prep_data(db: PostgreSQL):
     """
     db.make_geotable_from_query(point_query, "street_nodes", "POINT", 26918)
 
+
+def assign_stops_to_street_intersections(db: PostgreSQL):
+
     # 3) Assign closest street node ID to all SEPTA bus stops near study area
     # -----------------------------------------------------------------------
     df = db.query_as_df(
@@ -146,7 +149,8 @@ def export_data(db: PostgreSQL):
 def main():
     db = db_connection()
 
-    prep_data(db)
+    prep_network_data(db)
+    assign_stops_to_street_intersections(db)
     export_data(db)
 
 
