@@ -6,6 +6,7 @@ from fy21_university_city import process_hts_data as hts
 from fy21_university_city import qaqc as qa
 from fy21_university_city import process_urbansim_data as urbansim
 from fy21_university_city import process_bus_data as bus
+from fy21_university_city import process_crash_data as crash
 
 
 @click.group()
@@ -65,6 +66,12 @@ def process_bus_data():
     bus.main()
 
 
+@click.command()
+def process_crash_data():
+    """Aggregate collision data to intersections"""
+    crash.main()
+
+
 all_commands = [
     setup_db,
     export_shp,
@@ -74,6 +81,7 @@ all_commands = [
     process_hts_data,
     process_urbansim_data,
     process_bus_data,
+    process_crash_data,
 ]
 
 for cmd in all_commands:
