@@ -1,6 +1,8 @@
 import pg_data_etl as pg
 
 from fy21_university_city import GDRIVE_FOLDER
+from fy21_university_city.db_io import db_connection
+from fy21_university_city.process_bus_data import prep_data
 
 db = pg.Database("ucity", **pg.connections()["localhost"])
 
