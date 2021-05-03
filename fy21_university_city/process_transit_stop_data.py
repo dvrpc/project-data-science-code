@@ -17,6 +17,14 @@ table_lookup = {
     "SEPTA_-_Trolley_Stops": "trolley",
 }
 
+table_columns_to_query = {
+    # tablename: (sum_col, id_col)
+    "mfl": ("average_we", "concat(stop_id, '.', route)"),
+    "bus": ("wk_b_a", "concat(stop_id, '.', route)"),
+    "trolley": ("weekday_to", "concat(stop_id, '.', route)"),
+    "regional_rail": ("weekday_to + weekday__3", "concat(stop_id, '.', line_name)"),
+}
+
 
 def _load_data():
     """
@@ -41,24 +49,40 @@ def main():
 
     _load_data()
 
-    query = """
-        with all_transit_stops as (
-            (select stop_id, 'mfl' as mode, sum(average_we) as trips, geom from mfl group by stop_id, geom order by stop_id)
-            union
-            (select stop_id, 'bus' as mode, sum(wk_b_a) as trips, geom from bus group by stop_id, geom order by stop_id)
-            union
-            (select stop_id, 'trolley' as mode, sum(weekday_to) as trips, geom from trolley group by stop_id, geom order by stop_id)
-            union
-            (select stop_id, 'regional rail' as mode, sum(weekday_to + weekday__3) as trips, geom from regional_rail group by stop_id, geom order by stop_id)
-        )
-        select * from all_transit_stops
-        where st_intersects(st_transform(geom, 26918), (select st_collect(geom) from study_area))
-    """
+    for sql_tablename in table_lookup.values():
+        print(sql_tablename)
 
-    transit_stops_in_study_area = db.query(query, geo=True)
+        column_to_sum, id_column = table_columns_to_query[sql_tablename]
 
-    output_filepath = SEPTA_FOLDER / "merged_stops.shp"
-    transit_stops_in_study_area.gdf.to_file(output_filepath)
+        query = f"""
+            with clustered_data as (
+                select
+                    ST_ClusterDBSCAN(st_transform(geom, 26918), eps := 40, minpoints := 1) OVER() AS clst_id,
+                    *
+                FROM
+                    {sql_tablename}
+                where
+                    st_intersects(
+                        st_transform(geom, 26918),
+                        (select st_collect(geom) from study_area)
+                    )
+                order by clst_id
+            )
+            select
+                clst_id,
+                array_agg({id_column}) as stops,
+                sum({column_to_sum}) as trips,
+                st_centroid(st_collect(geom)) as geom
+            from clustered_data
+            group by clst_id
+        """
+
+        transit_stops_in_study_area = db.query(query, geo=True).gdf
+
+        transit_stops_in_study_area["stops"] = transit_stops_in_study_area["stops"].astype(str)
+
+        output_filepath = SEPTA_FOLDER / f"clustered_{sql_tablename}_stops.shp"
+        transit_stops_in_study_area.to_file(output_filepath)
 
 
 if __name__ == "__main__":
