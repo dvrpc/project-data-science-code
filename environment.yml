@@ -22,6 +22,7 @@ dependencies:
   - seaborn
   - rich
   - black
+  - beautifulsoup4
   - pip
   - pip:
       - git+https://github.com/aaronfraint/postgis-helpers.git
