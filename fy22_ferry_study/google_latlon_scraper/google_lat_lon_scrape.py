@@ -1,43 +1,62 @@
+"""
+Assumptions: 'all_locations.csv' already exists
+
+"""
+
 import requests
-import csv
-from pandas import *
+import pandas as pd
+from dotenv import find_dotenv, load_dotenv
+import os
+from pathlib import Path
 
-GOOGLE_API_KEY = 'your api key from google dev console goes here'
+load_dotenv(find_dotenv())
 
-#your csv, which at minimum should have an address column. 
-csv_with_addresses = 'all_locations.csv'
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-#blank csv, you create this yourself beforehand. might amend code so it autogenerates. 
-coordinates = 'coordinates.csv'
+GDRIVE_FOLDER = Path(os.getenv("GDRIVE_FOLDER"))
 
-#open csv and put addresses into list
-data = read_csv(csv_with_addresses)
-csv_address_column_as_list = data['Address'].tolist()
+# your csv, which at minimum should have an address column.
+input_path = GDRIVE_FOLDER / "all_locations.csv"
+output_path = GDRIVE_FOLDER / "all_locations_with_xy.csv"
 
-#function that returns lat & long using google's api. passes in your address list created above
+
 def extract_lat_long_via_address(address_or_zipcode):
-    for a in address_or_zipcode:        
-        lat, lng = None, None
-        api_key = GOOGLE_API_KEY
-        base_url = "https://maps.googleapis.com/maps/api/geocode/json"
-        endpoint = f"{base_url}?address={address_or_zipcode}&key={api_key}"
-        # see how our endpoint includes our API key? Yes this is yet another reason to restrict the key
-        r = requests.get(endpoint)
-        if r.status_code not in range(200, 299):
-            return None, None
-        try:
-            results = r.json()['results'][0]
-            lat = results['geometry']['location']['lat']
-            lng = results['geometry']['location']['lng']
-        except:
-            pass
-        return lat, lng            
-    
-for address in csv_address_column_as_list:     
-    extract_lat_long_via_address(address) 
-    coords = extract_lat_long_via_address(address)
-    
-    with open("coordinates.csv", 'a', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(coords)
+    """
+    function that returns lat & long using google's api.
+    passes in your address list created above.
+    """
+    print(f"Getting XY for: {address_or_zipcode}")
+    lat, lng = None, None
+    base_url = "https://maps.googleapis.com/maps/api/geocode/json"
+    endpoint = f"{base_url}?address={address_or_zipcode}&key={GOOGLE_API_KEY}"
 
+    # see how our endpoint includes our API key? Yes this is yet another reason to restrict the key
+    r = requests.get(endpoint)
+    if r.status_code not in range(200, 299):
+        return None, None
+
+    try:
+        results = r.json()["results"][0]
+        lat = results["geometry"]["location"]["lat"]
+        lng = results["geometry"]["location"]["lng"]
+    except IndexError:
+        print("ERROR!")
+        print(address_or_zipcode)
+        print(r.json())
+
+    return lat, lng
+
+
+if __name__ == "__main__":
+    df = pd.read_csv(input_path)
+    df["lat"] = 0.0
+    df["lng"] = 0.0
+
+    for idx, row in df.iterrows():
+        address = row.Address
+        lat, lng = extract_lat_long_via_address(address)
+
+        df.at[idx, "lat"] = lat
+        df.at[idx, "lng"] = lng
+
+    df.to_csv(output_path)
