@@ -1,3 +1,24 @@
+"""
+process_model_results.py
+------------------------
+
+This script takes data exported from VISUM
+and generates summaries that can subsequently
+be mapped for the project's final report.
+
+The general process for each dataset is to:
+    1) Import gis data
+    2) Import tabular data
+    3) Join the two tables as needed
+    4) Save the join results into one or many shapefiles, as needed
+
+Datasets include:
+    - highway link volumes and v/c ratios
+    - transit link volumes
+    - stop-level boardings by mode
+    - 24hr origin-destination flows to/from the study area
+"""
+
 import os
 import pandas as pd
 from dotenv import load_dotenv, find_dotenv
@@ -15,6 +36,9 @@ output_folder = GDRIVE_FOLDER / "GIS/Results_Data_for_Aaron_Crunched"
 
 
 def import_geodata():
+    """
+    Import all shapefiles that accompany the tabular model outputs
+    """
 
     # Import shapefiles
     shapefiles_to_import = result_folder.rglob("*.SHP")
@@ -31,6 +55,10 @@ def import_geodata():
 
 
 def import_and_process_hwy_links():
+    """
+    Import tabular data showing hwy link volumes and v/c ratios.
+    Generate shapefile summaries through a join operation.
+    """
     # Import the link-level volumes
     files_to_import = result_folder.rglob("*Link_Comparison_Vals.xlsx")
 
@@ -92,6 +120,11 @@ def import_and_process_hwy_links():
 
 
 def import_and_process_transit_links():
+    """
+    Import tabular data showing transit link volumes.
+    Generate shapefile summaries through a join operation.
+    """
+
     # Import the link-level volumes
     files_to_import = result_folder.rglob("*Transit_Link_Vols.xlsx")
 
@@ -151,6 +184,11 @@ def import_and_process_transit_links():
 
 
 def import_and_process_transit_stops():
+    """
+    Import tabular data showing stop (point) boardings by mode.
+    Generate shapefile summary through a join operation.
+    """
+
     filepath = result_folder / "Stop_Boards_by_TSys_Cleaned.xlsx"
 
     if f"public.stop_boardings" not in db.tables():
@@ -171,6 +209,11 @@ def import_and_process_transit_stops():
 
 
 def import_and_process_od():
+    """
+    Import tabular data showing O/D volumes to/from the study area.
+    Generate shapefile summaries through a join operation.
+    """
+
     filepath = result_folder / "Full_UC_OD_single_table_cleaned_for_postgres.xlsx"
 
     tabnames = ["FROM_UCITY", "TO_UCITY"]
