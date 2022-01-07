@@ -13,3 +13,12 @@ SELECT split_part(priorities, ';', 1) as p1, count(priorities) as p1count
 from student
 group by p1
 order by p1
+
+
+
+
+
+
+
+
+
