@@ -150,5 +150,28 @@ def import_and_process_transit_links():
         gdf.to_file(output_filepath)
 
 
+def import_and_process_transit_stops():
+    filepath = result_folder / "Stop_Boards_by_TSys_Cleaned.xlsx"
+
+    if f"public.stop_boardings" not in db.tables():
+        df = pd.read_excel(filepath, sheet_name="24_Hr_Boards")
+        db.import_dataframe(df, tablename="stop_boardings")
+
+    query = """
+        select d.*, p.*
+        from stop_boardings d
+        left join u_city_transit_stop p
+        on p.no = d.stop_num
+    """
+
+    gdf = db.gdf(query)
+
+    output_filepath = output_folder / "stop_boardings_24hr.shp"
+    gdf.to_file(output_filepath)
+
+
 if __name__ == "__main__":
-    import_and_process_transit_links()
+    # import_geodata()
+    # import_and_process_hwy_links()
+    # import_and_process_transit_links()
+    import_and_process_transit_stops()
