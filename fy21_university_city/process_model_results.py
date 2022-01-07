@@ -170,8 +170,51 @@ def import_and_process_transit_stops():
     gdf.to_file(output_filepath)
 
 
+def import_and_process_od():
+    filepath = result_folder / "Full_UC_OD_single_table_cleaned_for_postgres.xlsx"
+
+    tabnames = ["FROM_UCITY", "TO_UCITY"]
+
+    for tab in tabnames:
+        tablename = f"public.od_{tab.lower()}"
+
+        if tablename not in db.tables():
+            print(tablename)
+            df = pd.read_excel(filepath, sheet_name=tab)
+            db.import_dataframe(df, tablename=tablename)
+
+    query_template = """
+        select
+            z.no, z.name, z.geom,
+            d.*
+        from
+            u_city_zone z
+        full outer join
+            TABLENAME_PLACEHOLDER d
+        on
+            d.tazid = z.no
+        where
+            z.geom is not null
+    """
+
+    # this is a list of tuples
+    # tuples consist of (output_shp_name, query_string)
+    queries = [
+        ("trips_to_ucity", query_template.replace("TABLENAME_PLACEHOLDER", "od_to_ucity")),
+        ("trips_from_ucity", query_template.replace("TABLENAME_PLACEHOLDER", "od_from_ucity")),
+    ]
+
+    for shp_name, query in queries:
+        gdf = db.gdf(query)
+
+        output_filepath = output_folder / f"{shp_name}.shp"
+
+        gdf.to_file(output_filepath)
+
+
 if __name__ == "__main__":
-    # import_geodata()
-    # import_and_process_hwy_links()
-    # import_and_process_transit_links()
+    import_geodata()
+    import_and_process_hwy_links()
+    import_and_process_transit_links()
     import_and_process_transit_stops()
+    import_and_process_od()
