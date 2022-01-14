@@ -30,7 +30,7 @@ create table traces_raw as (
 	        _mkl, vesselname)
 	;
 
-CREATE INDEX "trace_index" ON "traces" USING gist (geom);
+CREATE INDEX "trace_index" ON "traces_raw" USING gist (geom);
 
 create table traces_cleaned as(
 	select t.vesselname, t.geom
