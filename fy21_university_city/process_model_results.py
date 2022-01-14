@@ -140,6 +140,7 @@ def import_and_process_transit_links():
         with link_data as (
             select
                 concat('a', fromnodeno, 'b', tonodeno) as uid,
+                "2015_put" as put_2015,
                 base_put,
                 mod_put,
                 high_put
@@ -195,17 +196,10 @@ def import_and_process_transit_stops():
         df = pd.read_excel(filepath, sheet_name="24_Hr_Boards")
         db.import_dataframe(df, tablename="stop_boardings")
 
-    query = """
-        select d.*, p.*
-        from stop_boardings d
-        left join u_city_transit_stop p
-        on p.no = d.stop_num
-    """
-
-    gdf = db.gdf(query)
+    query = "select d.*, p.code, p.name, p.geom from stop_boardings d left join u_city_transit_stop p on p.no = d.stop_num"
 
     output_filepath = output_folder / "stop_boardings_24hr.shp"
-    gdf.to_file(output_filepath)
+    db.export_gis(method="ogr2ogr", table_or_sql=query, filepath=output_filepath)
 
 
 def import_and_process_od():
@@ -256,8 +250,8 @@ def import_and_process_od():
 
 
 if __name__ == "__main__":
-    import_geodata()
-    import_and_process_hwy_links()
-    import_and_process_transit_links()
+    # import_geodata()
+    # import_and_process_hwy_links()
+    # import_and_process_transit_links()
     import_and_process_transit_stops()
-    import_and_process_od()
+    # import_and_process_od()
