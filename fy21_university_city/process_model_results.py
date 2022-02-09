@@ -31,9 +31,8 @@ load_dotenv(find_dotenv())
 DATABASE_URL = os.getenv("FY21_UCITY_DB")
 db = Database.from_uri(DATABASE_URL)
 
-result_folder = GDRIVE_FOLDER / "GIS/Results_Data_for_Aaron"
-output_folder = GDRIVE_FOLDER / "GIS/Results_Data_for_Aaron_Crunched"
-
+result_folder = GDRIVE_FOLDER / "GIS/Results_for_Mark"
+output_folder = GDRIVE_FOLDER / "GIS/Results_for_Mark_Crunched"
 
 def import_geodata():
     """
@@ -60,7 +59,7 @@ def import_and_process_hwy_links():
     Generate shapefile summaries through a join operation.
     """
     # Import the link-level volumes
-    files_to_import = result_folder.rglob("*Link_Comparison_Vals.xlsx")
+    files_to_import = result_folder.rglob("*HWY_Link_Feb.xlsx")
 
     for f in files_to_import:
         tablename = f.stem.lower()
@@ -106,9 +105,9 @@ def import_and_process_hwy_links():
     """
 
     for table in [
-        "am_hwy_link_comparison_vals",
-        "md_hwy_link_comparison_vals",
-        "pm_hwy_link_comparison_vals",
+        "am_hwy_link_feb",
+        "md_hwy_link_feb",
+        "pm_hwy_link_feb",
     ]:
         query = query_template.replace("LINK_TABLE_PLACEHOLDER", table)
         print(query)
@@ -126,7 +125,7 @@ def import_and_process_transit_links():
     """
 
     # Import the link-level volumes
-    files_to_import = result_folder.rglob("*Transit_Link_Vols.xlsx")
+    files_to_import = result_folder.rglob("*Transit_Link_Feb.xlsx")
 
     for f in files_to_import:
         tablename = f.stem.lower()
@@ -171,9 +170,9 @@ def import_and_process_transit_links():
     """
 
     for table in [
-        "am_transit_link_vols",
-        "md_transit_link_vols",
-        "pm_transit_link_vols",
+        "am_transit_link_feb",
+        "md_transit_link_feb",
+        "pm_transit_link_feb",
     ]:
         query = query_template.replace("LINK_TABLE_PLACEHOLDER", table)
         print(query)
@@ -190,7 +189,7 @@ def import_and_process_transit_stops():
     Generate shapefile summary through a join operation.
     """
 
-    filepath = result_folder / "Stop_Boards_by_TSys_Cleaned.xlsx"
+    filepath = result_folder / "Stop_Boards_by_TSys_Cleaned_Feb_22.xlsx"
 
     if f"public.stop_boardings" not in db.tables():
         df = pd.read_excel(filepath, sheet_name="24_Hr_Boards")
@@ -250,8 +249,8 @@ def import_and_process_od():
 
 
 if __name__ == "__main__":
-    # import_geodata()
-    # import_and_process_hwy_links()
-    # import_and_process_transit_links()
+    import_geodata()
+    import_and_process_hwy_links()
+    import_and_process_transit_links()
     import_and_process_transit_stops()
-    # import_and_process_od()
+    import_and_process_od()
