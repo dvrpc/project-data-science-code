@@ -10,7 +10,7 @@ race = "B02001_001E,B02001_002E,B02001_003E,B02001_004E,B02001_005E,B02001_006E,
 PA = "42" 
 NJ = "34"
 
-def census_puller(trait, zip, state, year):
+def census_pull(trait, zip, state, year):
     """Pulls ACS 5 year estimates from Census API for a given trait, zip code, state, and year."""
     trait_list = list(trait.split(","))
     url = f"https://api.census.gov/data/{year}/acs/acs5/?get={trait}&for=zip%20code%20tabulation%20area:{zip}&in=state:{state}&key={api_key}"
@@ -30,7 +30,7 @@ def census_puller(trait, zip, state, year):
             df.rename(columns= {item : clean_col}, inplace=True)
     return df.head(20)
 
-census_puller(race, 19121, PA, 2019)
+census_pull(race, 19121, PA, 2019)
 
 
 
