@@ -18,10 +18,9 @@ new_header = df.iloc[0]  # grab the first row for the header
 df = df[1:]  # take the data less the header row
 df.columns = new_header  # set the header row as the df header
 var_lookup = pd.read_json(
-    "https://api.census.gov/data/2019/acs/acs5/variables.json"
+    f"https://api.census.gov/data/{year}/acs/acs5/variables.json"
 )  # lookup table to make headers legible by referencing data dictionary
 var_lookup.columns = ["code"]
-new_column_list=[]
 for item in trait_list:
     if item in var_lookup.code:
         raw_col = var_lookup.code[item].get('label')
