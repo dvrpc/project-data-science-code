@@ -7,10 +7,11 @@ api_key = os.getenv("CENSUS_KEY")  # put census key from census api in env file
 
 #boilerplate census api references
 race = "B02001_001E,B02001_002E,B02001_003E,B02001_004E,B02001_005E,B02001_006E,B02001_007E,B02001_008E" #Eventually refactor into a legible dictionary for common queries
-PA = "42" #census state identifier
+PA = "42" 
 NJ = "34"
 
-def dataframe(trait, zip, state, year):
+def census_puller(trait, zip, state, year):
+    """Pulls ACS 5 year estimates from Census API for a given trait, zip code, state, and year."""
     trait_list = list(trait.split(","))
     url = f"https://api.census.gov/data/{year}/acs/acs5/?get={trait}&for=zip%20code%20tabulation%20area:{zip}&in=state:{state}&key={api_key}"
     print(url)
@@ -29,7 +30,7 @@ def dataframe(trait, zip, state, year):
             df.rename(columns= {item : clean_col}, inplace=True)
     return df.head(20)
 
-dataframe(race, 19121, PA, 2019)
+census_puller(race, 19121, PA, 2019)
 
 
 
