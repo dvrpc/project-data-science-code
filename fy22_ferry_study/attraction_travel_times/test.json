@@ -1,0 +1,114 @@
+{
+  "destination_addresses": [
+    "Uluru, Petermann NT 0872, Australia",
+    "Kakadu National Park, Kakadu Hwy, Jabiru NT 0886, Australia",
+    "Blue Mountains, New South Wales, Australia",
+    "Purnululu WA 6770, Australia",
+    "The Pinnacles, Montana 59421, USA"
+  ],
+  "origin_addresses": [
+    "Perth WA, Australia",
+    "Sydney NSW, Australia",
+    "Melbourne VIC, Australia",
+    "Adelaide SA, Australia",
+    "Brisbane QLD, Australia",
+    "Darwin NT, Australia",
+    "Hobart TAS 7000, Australia",
+    "Canberra ACT 2601, Australia"
+  ],
+  "rows": [
+    {
+      "elements": [
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" }
+      ]
+    },
+    {
+      "elements": [
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        {
+          "distance": { "text": "70.1 mi", "value": 112775 },
+          "duration": { "text": "2 hours 16 mins", "value": 8179 },
+          "status": "OK"
+        },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" }
+      ]
+    },
+    {
+      "elements": [
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        {
+          "distance": { "text": "660 mi", "value": 1062284 },
+          "duration": { "text": "21 hours 44 mins", "value": 78260 },
+          "status": "OK"
+        },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" }
+      ]
+    },
+    {
+      "elements": [
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        {
+          "distance": { "text": "1,032 mi", "value": 1661080 },
+          "duration": { "text": "1 day 1 hour", "value": 91640 },
+          "status": "OK"
+        },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" }
+      ]
+    },
+    {
+      "elements": [
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        {
+          "distance": { "text": "681 mi", "value": 1095213 },
+          "duration": { "text": "17 hours 37 mins", "value": 63440 },
+          "status": "OK"
+        },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" }
+      ]
+    },
+    {
+      "elements": [
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" }
+      ]
+    },
+    {
+      "elements": [
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" }
+      ]
+    },
+    {
+      "elements": [
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" },
+        {
+          "distance": { "text": "278 mi", "value": 446876 },
+          "duration": { "text": "7 hours 44 mins", "value": 27825 },
+          "status": "OK"
+        },
+        { "status": "ZERO_RESULTS" },
+        { "status": "ZERO_RESULTS" }
+      ]
+    }
+  ],
+  "status": "OK"
+}
