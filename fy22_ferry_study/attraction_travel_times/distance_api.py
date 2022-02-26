@@ -1,8 +1,5 @@
-from cgitb import lookup
 import googlemaps
 from datetime import datetime
-from numpy import matrix
-import responses
 import os
 from dotenv import load_dotenv
 from pathlib import Path
@@ -60,12 +57,15 @@ def unpack_dicts(list_of_dicts):
     """function to crack into the nested dictionary structure that the api returns"""
     df = pd.DataFrame()
     df["Address"] = ""
+    current_index = 0
     for dict in list_of_dicts:
+        destinations = pd.Series(json.dumps(dict["destination_addresses"][0]))
         json_object = json.dumps(dict["rows"][0].get("elements")[0])
         df_dict = pd.read_json(json_object)
         df_dict = df_dict.drop(labels=["value"], axis=0)
-        destinations = pd.Series(json.dumps(dict["destination_addresses"][0]))
         df = pd.concat([df, df_dict], ignore_index=True, axis=0)
+        df.at[current_index, "Address"] = destinations[0]
+        current_index += 1
 
     return df
 
@@ -75,37 +75,7 @@ unpack_dicts(list_of_dicts)
 distance_duration_iteration()
 print(list_of_dicts)
 
-# unpack_dicts(list_of_dicts)
 
-
-# matrixdict = {
-#     "destination_addresses": ["95 Woodstown Rd, Swedesboro, NJ 08085, USA"],
-#     "origin_addresses": [
-#         "211 S Christopher Columbus Blvd, Philadelphia, PA 19106, USA"
-#     ],
-#     "rows": [
-#         {
-#             "elements": [
-#                 {
-#                     "distance": {"text": "28.9 mi", "value": 46501},
-#                     "duration": {"text": "37 mins", "value": 2248},
-#                     "duration_in_traffic": {"text": "36 mins", "value": 2189},
-#                     "status": "OK",
-#                 }
-#             ]
-#         }
-#     ],
-#     "status": "OK",
-# }
-
-
-# responses.add(
-#     responses.GET,
-#     "https://maps.googleapis.com/maps/api/distancematrix/json",
-#     body='{"status":"OK","rows":[]}',
-#     status=200,
-#     content_type="application/json",
-# )
-
-
-# print(matrix)
+# todo: add target datetime variable instead of just using datetimen now
+# add functionality to discern between transit/driving, perhaps return both in one dataframe
+# add fare functionality
