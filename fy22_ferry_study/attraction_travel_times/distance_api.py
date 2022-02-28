@@ -15,12 +15,12 @@ now = datetime.now()
 
 origins = GDRIVE_FOLDER / "origin.csv"
 destinations = GDRIVE_FOLDER / "attractions.csv"
-dummydata = GDRIVE_FOLDER / "dummydata.csv"
+# dummydata = GDRIVE_FOLDER / "dummydata.csv"
 origin_df = pd.read_csv(origins)
 destinations_df = pd.read_csv(destinations)
-dummy_df = pd.read_csv(dummydata)
-dummy_df["Distance"] = " "
-dummy_df["Duration"] = " "
+# dummy_df = pd.read_csv(dummydata)
+# dummy_df["Distance"] = " "
+# dummy_df["Duration"] = " "
 destinations_df["Distance"] = " "
 destinations_df["Duration"] = " "
 
@@ -46,7 +46,7 @@ def distance_duration(destination):
 
 def distance_duration_iteration():
     """loops through the destinations file and runs the distance duration function"""
-    for idx, row in dummy_df.iterrows():
+    for idx, row in destinations_df.iterrows():
         lat = row["Latitude"]
         lon = row["Longitude"]
         destination = (lat, lon)
@@ -70,10 +70,12 @@ def unpack_dicts(list_of_dicts):
     return df
 
 
-unpack_dicts(list_of_dicts)
+def df_to_csv(df):
+    df.to_csv(GDRIVE_FOLDER / "travel_times.csv", sep=",")
+
 
 distance_duration_iteration()
-print(list_of_dicts)
+df_to_csv(unpack_dicts(list_of_dicts))
 
 
 # todo: add target datetime variable instead of just using datetimen now
