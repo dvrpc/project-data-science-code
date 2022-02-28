@@ -4,29 +4,23 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 import pandas as pd
-import json
 
 load_dotenv()
 api_key = os.getenv("google_api")
 gmaps = googlemaps.Client(key=api_key)
 GDRIVE_FOLDER = Path(os.getenv("GDRIVE_FOLDER"))
-
-now = datetime.now()
-
 origins = GDRIVE_FOLDER / "origin.csv"
 destinations = GDRIVE_FOLDER / "attractions.csv"
-# dummydata = GDRIVE_FOLDER / "dummydata.csv"
 origin_df = pd.read_csv(origins)
 destinations_df = pd.read_csv(destinations)
-# dummy_df = pd.read_csv(dummydata)
-# dummy_df["Distance"] = " "
-# dummy_df["Duration"] = " "
-destinations_df["Distance"] = " "
-destinations_df["Duration"] = " "
-
-# hardcoded here since my origin doesn't change, but if yours does you can tweak the function.
-origin = (39.946196, -75.139832)
+now = datetime.now()
 list_of_dicts = []
+
+origin = (
+    39.946196,
+    -75.139832,
+)  # hardcoded here since my origin doesn't change, but if yours does you can tweak the function to accept origins.
+mode = "driving"  # accepts driving, walking, transit, cycling
 
 
 def distance_duration(destination):
@@ -37,7 +31,7 @@ def distance_duration(destination):
     matrix = gmaps.directions(
         origin,
         destination,
-        mode="driving",
+        mode,
         units="imperial",
         departure_time=now,
     )
@@ -76,11 +70,12 @@ def unpack_dicts(output):
 
 
 def df_to_csv(df):
-    df.to_csv(GDRIVE_FOLDER / "travel_times.csv", sep=",")
+    df.to_csv(GDRIVE_FOLDER / f"{mode}_travel_times.csv", sep=",")
 
 
-distance_duration_iteration()
-df_to_csv(unpack_dicts(list_of_dicts))
+if __name__ == "__main__":
+    distance_duration_iteration()
+    df_to_csv(unpack_dicts(list_of_dicts))
 
 
 # todo: add target datetime variable instead of just using datetimen now
