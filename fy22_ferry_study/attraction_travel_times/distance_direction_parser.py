@@ -34,7 +34,7 @@ def distance_duration(destination):
     in this case my origin is always the same so i've defined it separately above.
     appends the returned dictionary to a list of dictionaries."""
 
-    matrix = gmaps.distance_matrix(
+    matrix = gmaps.directions(
         origin,
         destination,
         mode="driving",
@@ -53,20 +53,25 @@ def distance_duration_iteration():
         distance_duration(destination)
 
 
-def unpack_dicts(list_of_dicts):
+def unpack_dicts(output):
     """function to crack into the nested dictionary structure that the api returns"""
-    df = pd.DataFrame()
-    df["Address"] = ""
-    current_index = 0
-    for dict in list_of_dicts:
-        destinations = pd.Series(json.dumps(dict["destination_addresses"][0]))
-        json_object = json.dumps(dict["rows"][0].get("elements")[0])
-        df_dict = pd.read_json(json_object)
-        df_dict = df_dict.drop(labels=["value"], axis=0)
-        df = pd.concat([df, df_dict], ignore_index=True, axis=0)
-        df.at[current_index, "Address"] = destinations[0]
-        current_index += 1
-
+    labels = ["distance", "duration", "duration_in_traffic", "lat", "lng"]
+    df = pd.DataFrame(columns=labels)
+    for item in list_of_dicts:
+        destination_lat = item[0]["legs"][0]["end_location"]["lat"]
+        destination_lng = item[0]["legs"][0]["end_location"]["lng"]
+        distance = item[0]["legs"][0]["distance"]["text"]
+        duration = item[0]["legs"][0]["duration"]["text"]
+        duration_in_traffic = item[0]["legs"][0]["duration_in_traffic"]["text"]
+        d = {
+            "distance": [distance],
+            "duration": [duration],
+            "duration_in_traffic": [duration_in_traffic],
+            "lat": [destination_lat],
+            "lng": [destination_lng],
+        }
+        list_df = pd.DataFrame(data=d)
+        df = pd.concat([list_df, df], axis=0, ignore_index=True)
     return df
 
 
