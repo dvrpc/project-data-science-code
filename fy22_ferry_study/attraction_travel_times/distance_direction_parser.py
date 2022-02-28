@@ -20,7 +20,6 @@ origin = (
     39.946196,
     -75.139832,
 )  # hardcoded here since my origin doesn't change, but if yours does you can tweak the function to accept origins.
-mode = "driving"  # accepts driving, walking, transit, cycling
 
 
 def distance_duration_iteration():
@@ -50,29 +49,46 @@ def distance_duration_iteration():
         distance_duration(destination)
 
     if mode == "driving":
+        print("returning driving list")
         return driving_list
     if mode == "transit":
+        print("returning transit list")
         return transit_list
 
 
 def unpack_dicts(list_of_dicts):
-    """function to crack into the nested dictionary structure that the api returns"""
+    """function to crack into the nested dictionary structure that the google api returns"""
     labels = ["distance", "duration", "lat", "lng"]
     df = pd.DataFrame(columns=labels)
 
-    for item in list_of_dicts:
-        destination_lat = item[0]["legs"][0]["end_location"]["lat"]
-        destination_lng = item[0]["legs"][0]["end_location"]["lng"]
-        distance = item[0]["legs"][0]["distance"]["text"]
-        duration = item[0]["legs"][0]["duration"]["text"]
-        d = {
-            "distance": [distance],
-            "duration": [duration],
-            "lat": [destination_lat],
-            "lng": [destination_lng],
-        }
-        list_df = pd.DataFrame(data=d)
-        df = pd.concat([list_df, df], axis=0, ignore_index=True)
+    try:
+        for item in list_of_dicts:
+            destination_lat = item[0]["legs"][0]["end_location"]["lat"]
+            destination_lng = item[0]["legs"][0]["end_location"]["lng"]
+            distance = item[0]["legs"][0]["distance"]["text"]
+            duration = item[0]["legs"][0]["duration"]["text"]
+            d = {
+                "distance": [distance],
+                "duration": [duration],
+                "lat": [destination_lat],
+                "lng": [destination_lng],
+            }
+            list_df = pd.DataFrame(data=d)
+            df = pd.concat([list_df, df], axis=0, ignore_index=True)
+    except:
+        for item in list_of_dicts[0]:
+            destination_lat = item["legs"][0]["end_location"]["lat"]
+            destination_lng = item["legs"][0]["end_location"]["lng"]
+            distance = item["legs"][0]["distance"]["text"]
+            duration = item["legs"][0]["duration"]["text"]
+            d = {
+                "distance": [distance],
+                "duration": [duration],
+                "lat": [destination_lat],
+                "lng": [destination_lng],
+            }
+            list_df = pd.DataFrame(data=d)
+            df = pd.concat([list_df, df], axis=0, ignore_index=True)
 
     return df
 
@@ -81,5 +97,10 @@ def df_to_csv(df):
     df.to_csv(GDRIVE_FOLDER / f"{mode}_travel_times.csv", sep=",")
 
 
-if __name__ == "main":
-    df_to_csv(unpack_dicts(distance_duration_iteration()))
+if __name__ == "__main__":
+    mode = "driving"  # accepts driving, walking, transit, cycling
+    unpacked_driving = unpack_dicts(distance_duration_iteration())
+    df_to_csv(unpacked_driving)
+    mode = "transit"  # change mode to transit and rerun
+    unpacked_transit = unpack_dicts(distance_duration_iteration())
+    df_to_csv(unpacked_transit)
