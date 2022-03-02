@@ -23,6 +23,7 @@ origin = (
 
 
 def distance_duration_iteration():
+    '''returns a list of origin/destination dicts for driving or transit, respectively'''
     driving_list = []
     transit_list = []
 
@@ -98,9 +99,9 @@ def df_to_csv(df):
 
 
 if __name__ == "__main__":
-    mode = "driving"  # accepts driving, walking, transit, cycling
-    unpacked_driving = unpack_dicts(distance_duration_iteration())
-    df_to_csv(unpacked_driving)
+    # mode = "driving"  # accepts driving, walking, transit, cycling
+    # unpacked_driving = unpack_dicts(distance_duration_iteration())
+    # df_to_csv(unpacked_driving)
     mode = "transit"  # change mode to transit and rerun
     unpacked_transit = unpack_dicts(distance_duration_iteration())
     df_to_csv(unpacked_transit)
