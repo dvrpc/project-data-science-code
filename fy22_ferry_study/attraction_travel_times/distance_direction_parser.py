@@ -4,6 +4,9 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 import pandas as pd
+from shapely.geometry import MultiLineString
+import polyline
+import geopandas as gpd
 
 load_dotenv()
 api_key = os.getenv("google_api")
@@ -23,7 +26,7 @@ origin = (
 
 
 def distance_duration_iteration():
-    '''returns a list of origin/destination dicts for driving or transit, respectively'''
+    """returns a list of origin/destination dicts for driving or transit, respectively"""
     driving_list = []
     transit_list = []
 
@@ -98,10 +101,46 @@ def df_to_csv(df):
     df.to_csv(GDRIVE_FOLDER / f"{mode}_travel_times.csv", sep=",")
 
 
+def unpack_geometries(transpo_list):
+    """accepts either the transit list or the driving list from the distance_duration_iteration function and parses accordingly"""
+    polylines = []
+    try:
+        for item in transpo_list[0]:
+            if not item:
+                pass  # just appending blank items here if there's no polyline
+            else:
+                coords = [
+                    polyline.decode(
+                        item[0]["overview_polyline"]["points"], geojson=True
+                    )
+                ]
+                line = MultiLineString(coords)
+                polylines.append(line)
+    except:
+        for item in transpo_list:
+            if not item:
+                pass  # just appending blank items here if there's no polyline
+            else:
+                coords = [
+                    polyline.decode(
+                        item[0]["overview_polyline"]["points"], geojson=True
+                    )
+                ]
+                line = MultiLineString(coords)
+                polylines.append(line)
+
+    df = pd.DataFrame(polylines)
+    df.columns = ["strings"]
+    gdf = gpd.GeoDataFrame(df, crs="epsg:4326", geometry="strings")
+    gdf.to_file(GDRIVE_FOLDER / f"{mode}polylines.geojson", driver="GeoJSON")
+
+
 if __name__ == "__main__":
-    # mode = "driving"  # accepts driving, walking, transit, cycling
-    # unpacked_driving = unpack_dicts(distance_duration_iteration())
-    # df_to_csv(unpacked_driving)
+    mode = "driving"  # accepts driving, walking, transit, cycling
+    unpacked_driving = unpack_dicts(distance_duration_iteration())
+    df_to_csv(unpacked_driving)
+    unpack_geometries(unpacked_driving)
     mode = "transit"  # change mode to transit and rerun
     unpacked_transit = unpack_dicts(distance_duration_iteration())
     df_to_csv(unpacked_transit)
+    unpack_geometries(unpacked_transit)
