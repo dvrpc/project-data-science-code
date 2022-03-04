@@ -25,7 +25,7 @@ origin = (
 )  # hardcoded here since my origin doesn't change, but if yours does you can tweak the function to accept origins.
 
 
-def distance_duration_iteration():
+def distance_duration_iteration(mode):
     """returns a list of origin/destination dicts for driving or transit, respectively"""
     driving_list = []
     transit_list = []
@@ -59,6 +59,11 @@ def distance_duration_iteration():
         print("returning transit list")
         return transit_list
 
+
+def save_list_in_memory(transpo_list):
+    '''saves list from distance_duration_iteration into memory to avoid repeated calls to the API'''
+    transpo_list = transpo_list
+    return transpo_list
 
 def unpack_dicts(list_of_dicts):
     """function to crack into the nested dictionary structure that the google api returns"""
@@ -97,18 +102,24 @@ def unpack_dicts(list_of_dicts):
     return df
 
 
-def df_to_csv(df):
+def df_to_csv(df, mode):
     df.to_csv(GDRIVE_FOLDER / f"{mode}_travel_times.csv", sep=",")
-
 
 def unpack_geometries(transpo_list):
     """accepts either the transit list or the driving list from the distance_duration_iteration function and parses accordingly"""
     polylines = []
+
+    if transpo_list == driving_list: 
+        mode = "driving"
+    if transpo_list == transit_list:
+        mode = "transit" # necessary to set mode for f string at end of function
+
     try:
-        for item in transpo_list[0]:
+        for row in transpo_list:
             if not item:
                 pass  # just appending blank items here if there's no polyline
             else:
+                print(item[0])
                 coords = [
                     polyline.decode(
                         item[0]["overview_polyline"]["points"], geojson=True
@@ -130,17 +141,23 @@ def unpack_geometries(transpo_list):
                 polylines.append(line)
 
     df = pd.DataFrame(polylines)
+
+    print(df)
+
     df.columns = ["strings"]
     gdf = gpd.GeoDataFrame(df, crs="epsg:4326", geometry="strings")
-    gdf.to_file(GDRIVE_FOLDER / f"{mode}polylines.geojson", driver="GeoJSON")
-
+    gdf.to_file(GDRIVE_FOLDER / f"{mode}_polylines.geojson", driver="GeoJSON")
 
 if __name__ == "__main__":
-    mode = "driving"  # accepts driving, walking, transit, cycling
-    unpacked_driving = unpack_dicts(distance_duration_iteration())
-    df_to_csv(unpacked_driving)
-    unpack_geometries(unpacked_driving)
-    mode = "transit"  # change mode to transit and rerun
-    unpacked_transit = unpack_dicts(distance_duration_iteration())
-    df_to_csv(unpacked_transit)
-    unpack_geometries(unpacked_transit)
+    #holds lists in memory so api isn't repeatedly called 
+    driving_list = save_list_in_memory(distance_duration_iteration("driving"))
+    transit_list = save_list_in_memory(distance_duration_iteration("transit"))
+    #runs all functions for driving times/durations/geometries
+    unpacked_driving = unpack_dicts(distance_duration_iteration("driving"))
+    df_to_csv(unpacked_driving, "driving")
+    unpack_geometries(driving_list)
+    #runs the same for transit
+    unpacked_transit = unpack_dicts(distance_duration_iteration("transit"))
+    df_to_csv(unpacked_transit, "transit")
+    unpack_geometries(transit_list)
+    
