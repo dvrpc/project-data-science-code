@@ -61,7 +61,7 @@ def distance_duration_iteration(mode):
 
 
 def save_list_in_memory(transpo_list):
-    '''saves list from distance_duration_iteration into memory to avoid repeated calls to the API'''
+    '''saves list from distance_duration_iteration into memory to avoid repeated calls to the API. mostly useful if in a notebook.'''
     transpo_list = transpo_list
     return transpo_list
 
@@ -114,31 +114,18 @@ def unpack_geometries(transpo_list):
     if transpo_list == transit_list:
         mode = "transit" # necessary to set mode for f string at end of function
 
-    try:
-        for row in transpo_list:
-            if not item:
-                pass  # just appending blank items here if there's no polyline
-            else:
-                print(item[0])
-                coords = [
-                    polyline.decode(
-                        item[0]["overview_polyline"]["points"], geojson=True
-                    )
-                ]
-                line = MultiLineString(coords)
-                polylines.append(line)
-    except:
-        for item in transpo_list:
-            if not item:
-                pass  # just appending blank items here if there's no polyline
-            else:
-                coords = [
-                    polyline.decode(
-                        item[0]["overview_polyline"]["points"], geojson=True
-                    )
-                ]
-                line = MultiLineString(coords)
-                polylines.append(line)
+
+    for item in transpo_list:
+        if not item:
+            pass  # just appending blank items here if there's no polyline
+        else:
+            coords = [
+                polyline.decode(
+                    item[0]["overview_polyline"]["points"], geojson=True
+                )
+            ]
+            line = MultiLineString(coords)
+            polylines.append(line)
 
     df = pd.DataFrame(polylines)
 
@@ -153,11 +140,11 @@ if __name__ == "__main__":
     driving_list = save_list_in_memory(distance_duration_iteration("driving"))
     transit_list = save_list_in_memory(distance_duration_iteration("transit"))
     #runs all functions for driving times/durations/geometries
-    unpacked_driving = unpack_dicts(distance_duration_iteration("driving"))
+    unpacked_driving = unpack_dicts(driving_list)
     df_to_csv(unpacked_driving, "driving")
     unpack_geometries(driving_list)
     #runs the same for transit
-    unpacked_transit = unpack_dicts(distance_duration_iteration("transit"))
+    unpacked_transit = unpack_dicts(transit_list)
     df_to_csv(unpacked_transit, "transit")
     unpack_geometries(transit_list)
     
