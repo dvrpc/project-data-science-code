@@ -38,6 +38,8 @@ def distance_duration_iteration(mode):
             units="imperial",
             departure_time=now,
         )
+        names = {"name": name}
+        output.insert(0, names)
 
         if mode == "driving":
             driving_list.append(output)
@@ -49,6 +51,7 @@ def distance_duration_iteration(mode):
     for idx, row in destinations_df.iterrows():
         lat = row["Latitude"]
         lon = row["Longitude"]
+        name = row["Name"]
         destination = (lat, lon)
         distance_duration(destination)
 
@@ -61,43 +64,50 @@ def distance_duration_iteration(mode):
 
 
 def save_list_in_memory(transpo_list):
-    '''saves list from distance_duration_iteration into memory to avoid repeated calls to the API. mostly useful if in a notebook.'''
+    """saves list from distance_duration_iteration into memory to avoid repeated calls to the API"""
     transpo_list = transpo_list
     return transpo_list
 
+
 def unpack_dicts(list_of_dicts):
     """function to crack into the nested dictionary structure that the google api returns"""
-    labels = ["distance", "duration", "lat", "lng"]
-    df = pd.DataFrame(columns=labels)
+    df = pd.DataFrame()
 
-    try:
+    if list_of_dicts == "driving_list":
         for item in list_of_dicts:
-            destination_lat = item[0]["legs"][0]["end_location"]["lat"]
-            destination_lng = item[0]["legs"][0]["end_location"]["lng"]
-            distance = item[0]["legs"][0]["distance"]["text"]
-            duration = item[0]["legs"][0]["duration"]["text"]
+            destination_lat = item[1]["legs"][0]["end_location"]["lat"]
+            destination_lng = item[1]["legs"][0]["end_location"]["lng"]
+            distance = item[1]["legs"][0]["distance"]["text"]
+            duration = item[1]["legs"][0]["duration"]["text"]
+            name = item[0]["name"]
             d = {
-                "distance": [distance],
-                "duration": [duration],
+                "name": [name],
                 "lat": [destination_lat],
                 "lng": [destination_lng],
+                "d_distance": [distance],
+                "d_duration": [duration],
             }
             list_df = pd.DataFrame(data=d)
             df = pd.concat([list_df, df], axis=0, ignore_index=True)
-    except:
-        for item in list_of_dicts[0]:
-            destination_lat = item["legs"][0]["end_location"]["lat"]
-            destination_lng = item["legs"][0]["end_location"]["lng"]
-            distance = item["legs"][0]["distance"]["text"]
-            duration = item["legs"][0]["duration"]["text"]
-            d = {
-                "distance": [distance],
-                "duration": [duration],
-                "lat": [destination_lat],
-                "lng": [destination_lng],
-            }
-            list_df = pd.DataFrame(data=d)
-            df = pd.concat([list_df, df], axis=0, ignore_index=True)
+    else:
+        for item in list_of_dicts:
+            if len(item) == 2:
+                destination_lat = item[1]["legs"][0]["end_location"]["lat"]
+                destination_lng = item[1]["legs"][0]["end_location"]["lng"]
+                distance = item[1]["legs"][0]["distance"]["text"]
+                duration = item[1]["legs"][0]["duration"]["text"]
+                name = item[0]["name"]
+                d = {
+                    "name": [name],
+                    "lat": [destination_lat],
+                    "lng": [destination_lng],
+                    "d_distance": [distance],
+                    "d_duration": [duration],
+                }
+                list_df = pd.DataFrame(data=d)
+                df = pd.concat([list_df, df], axis=0, ignore_index=True)
+            else:
+                pass
 
     return df
 
@@ -105,46 +115,44 @@ def unpack_dicts(list_of_dicts):
 def df_to_csv(df, mode):
     df.to_csv(GDRIVE_FOLDER / f"{mode}_travel_times.csv", sep=",")
 
+
 def unpack_geometries(transpo_list):
     """accepts either the transit list or the driving list from the distance_duration_iteration function and parses accordingly"""
     polylines = []
 
-    if transpo_list == driving_list: 
+    if transpo_list == driving_list:
         mode = "driving"
     if transpo_list == transit_list:
-        mode = "transit" # necessary to set mode for f string at end of function
-
+        mode = "transit"  # necessary to set mode for f string at end of function
 
     for item in transpo_list:
-        if not item:
-            pass  # just appending blank items here if there's no polyline
-        else:
-            coords = [
-                polyline.decode(
-                    item[0]["overview_polyline"]["points"], geojson=True
-                )
+        if len(item) == 2:
+            overview_line = [
+                polyline.decode(item[1]["overview_polyline"]["points"], geojson=True)
             ]
-            line = MultiLineString(coords)
-            polylines.append(line)
+        line = MultiLineString(overview_line)
+        polylines.append(line)
+    else:
+        pass
 
     df = pd.DataFrame(polylines)
-
-    print(df)
-
     df.columns = ["strings"]
     gdf = gpd.GeoDataFrame(df, crs="epsg:4326", geometry="strings")
     gdf.to_file(GDRIVE_FOLDER / f"{mode}_polylines.geojson", driver="GeoJSON")
 
+
 if __name__ == "__main__":
-    #holds lists in memory so api isn't repeatedly called 
+    # holds lists in memory so api isn't repeatedly called  (more useful for jupyter notebook than this script)
     driving_list = save_list_in_memory(distance_duration_iteration("driving"))
     transit_list = save_list_in_memory(distance_duration_iteration("transit"))
-    #runs all functions for driving times/durations/geometries
+    # runs all functions for driving times/durations/geometries
     unpacked_driving = unpack_dicts(driving_list)
     df_to_csv(unpacked_driving, "driving")
     unpack_geometries(driving_list)
-    #runs the same for transit
+    # runs the same for transit
     unpacked_transit = unpack_dicts(transit_list)
     df_to_csv(unpacked_transit, "transit")
     unpack_geometries(transit_list)
-    
+
+    # todo: combine dataframes in unpack function so one df is returned with both driving and travel times instead of two csvs
+    # create function to unpack details of trip rather than just overview line
