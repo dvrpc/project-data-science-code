@@ -164,7 +164,6 @@ if __name__ == "__main__":
 
     # unpacks geometries as geojson
     unpack_geometries(driving_list, transit_list)
-\
 
-    # todo: combine dataframes in unpack function so one df is returned with both driving and travel times instead of two csvs
+
     # create function to unpack details of trip rather than just overview line
