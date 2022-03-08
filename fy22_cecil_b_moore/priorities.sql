@@ -32,3 +32,11 @@ SELECT split_part(priorities, ';', 5) as p5, count(priorities) as p5count
 from longform_joined lj 
 group by p5
 order by p5
+
+
+
+--priorities by frequency of user 
+SELECT split_part(priorities, ';', 1) as p1, count(priorities) as p1count
+from longform_joined lj 
+where frequency = 'Every week'
+group by p1

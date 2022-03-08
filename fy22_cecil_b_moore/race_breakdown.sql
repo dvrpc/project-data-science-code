@@ -4,6 +4,8 @@ group by q2
 select q2, count(q2) from  in_person_survey_response_data_entry ipsrde 
 group by q2
 
+drop table if exists racial_breakdown;
+create table racial_breakdown as(
 select q2, count(q2) from longform_joined lj 
-group by q2
+group by q2);
 
