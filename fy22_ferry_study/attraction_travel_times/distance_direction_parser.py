@@ -25,6 +25,7 @@ origin = (
 )  # hardcoded here since my origin doesn't change, but if yours does you can tweak the function to accept origins.
 
 
+<<<<<<< HEAD
 def distance_duration(destination,mode,name):
     driving_list = []
     transit_list = []
@@ -49,12 +50,55 @@ def distance_duration(destination,mode,name):
 
 def distance_duration_iteration(mode):
     """returns a list of origin/destination dicts for driving or transit, respectively"""
+=======
+def distance_duration_iteration(mode):
+    """returns a list of origin/destination dicts for driving or transit, respectively"""
+    driving_list = []
+    transit_list = []
+
+    def distance_duration(destination):
+        output = gmaps.directions(
+            origin,
+            destination,
+            mode,
+            units="imperial",
+            departure_time=now,
+        )
+        names = {"name": name}
+        output.insert(0, names)
+
+        if mode == "driving":
+            driving_list.append(output)
+
+        if mode == "transit":
+            transit_list.append(output)
+
+    """loops through the destinations file and runs the distance duration function"""
+>>>>>>> 9aaaff9d42319a98b4c54f18208a4f84ed04d7e9
     for idx, row in destinations_df.iterrows():
         lat = row["Latitude"]
         lon = row["Longitude"]
         name = row["Name"]
         destination = (lat, lon)
+<<<<<<< HEAD
         distance_duration(destination,mode,name)
+=======
+        distance_duration(destination)
+
+    if mode == "driving":
+        print("returning driving list")
+        return driving_list
+    if mode == "transit":
+        print("returning transit list")
+        return transit_list
+
+
+def save_list_in_memory(transpo_list):
+    """saves list from distance_duration_iteration into memory to avoid repeated calls to the API"""
+    transpo_list = transpo_list
+    return transpo_list
+
+>>>>>>> 9aaaff9d42319a98b4c54f18208a4f84ed04d7e9
 
 def unpack_dicts(driving_list, transit_list):
     """function to crack into the nested dictionary structure that the google api returns"""
@@ -134,8 +178,13 @@ def unpack_geometries(transpo_list):
 
 if __name__ == "__main__":
     # holds lists in memory so api isn't repeatedly called  (more useful for jupyter notebook than this script)
+<<<<<<< HEAD
     driving_list = distance_duration_iteration("driving")
     transit_list = distance_duration_iteration("transit")
+=======
+    driving_list = save_list_in_memory(distance_duration_iteration("driving"))
+    transit_list = save_list_in_memory(distance_duration_iteration("transit"))
+>>>>>>> 9aaaff9d42319a98b4c54f18208a4f84ed04d7e9
 
     # unpacks dictionaries returned by API
     unpacked_dictionaries = unpack_dicts(driving_list, transit_list)
@@ -147,5 +196,9 @@ if __name__ == "__main__":
     unpack_geometries(driving_list)
     unpack_geometries(transit_list)
 
+<<<<<<< HEAD
     #todo
+=======
+    # todo: combine dataframes in unpack function so one df is returned with both driving and travel times instead of two csvs
+>>>>>>> 9aaaff9d42319a98b4c54f18208a4f84ed04d7e9
     # create function to unpack details of trip rather than just overview line
