@@ -150,6 +150,18 @@ def unpack_geometries(driving_list, transit_list):
     gdf = gpd.GeoDataFrame(df, crs="epsg:4326", geometry="strings")
     gdf.to_file(GDRIVE_FOLDER / "transit_polylines.geojson", driver="GeoJSON")
 
+def csv_cleanup():
+    exported_csv = GDRIVE_FOLDER / "attraction_travel_times.csv"
+    df = pd.read_csv(exported_csv)
+    df['d_distance'] = df["d_distance"].str.replace("[ mi]","")
+    df['t_distance'] =df["t_distance"].str.replace("[ mi]","")
+    df['d_duration'] = df["d_duration"].str.replace("mins","min")
+    df['t_duration'] =df["t_duration"].str.replace("mins","min")
+    df['d_duration'] = pd.to_timedelta(df['d_duration'])
+    df['t_duration'] = pd.to_timedelta(df['t_duration'])
+    df['d_faster_t'] = df['t_duration'] - df['d_duration'] 
+    df_to_csv(df)
+
 
 if __name__ == "__main__":
     # holds lists in memory so api isn't repeatedly called  (more useful for jupyter notebook than this script)
@@ -164,6 +176,9 @@ if __name__ == "__main__":
 
     # unpacks geometries as geojson
     unpack_geometries(driving_list, transit_list)
+    
+    #cleans up csv
+    csv_cleanup()
 
-
+    #todo:
     # create function to unpack details of trip rather than just overview line
