@@ -1,3 +1,6 @@
+drop table if exists conditions_sum;
+
+create table conditions_sum as (
 select 
 	(select sum(cast(
 	    case
@@ -80,7 +83,7 @@ select
 		    as float
 		)) as condition_9_sum
 		from longform_joined lj) 
-
+)
 
 
 
