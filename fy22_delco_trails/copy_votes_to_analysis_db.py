@@ -1,3 +1,10 @@
+"""
+copy_votes_to_analysis_db.py
+----------------------------
+
+Copy the stakeholder votes from the webapp database
+to the analysis database.
+"""
 import os
 from pg_data_etl import Database
 from dotenv import load_dotenv
@@ -25,5 +32,8 @@ query_webapp_results = """
     order by t.gid
 """
 
-gdf = db_webapp.gdf(query_webapp_results)
-db_analysis.import_geodataframe(gdf, "votes_from_webapp", gpd_kwargs={"if_exists": "replace"})
+if __name__ == "__main__":
+    print("Querying vote results")
+    gdf = db_webapp.gdf(query_webapp_results)
+    print("Copying vote results to analysis database")
+    db_analysis.import_geodataframe(gdf, "votes_from_webapp", gpd_kwargs={"if_exists": "replace"})
