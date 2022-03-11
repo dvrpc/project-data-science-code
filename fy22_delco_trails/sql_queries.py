@@ -8,15 +8,25 @@ using a placeholder for the 'gid' value. To use these templates,
 replace the OBJECTID_PLACEHOLDER value with a specific number.
 """
 
-parks = """
-    with trailhead as (
+trailhead_subquery = """
         select st_transform(geom, 26918) as geom
-        from consolidated_trailheads
-        where gid = OBJECTID_PLACEHOLDER
+        from votes_from_webapp
+        where original_gid = OBJECTID_PLACEHOLDER
+"""
+
+isochrone_subquery = """
+        select st_transform(geom, 26918) as geom
+        from isochrones_2mi
+        where poi_uid = 'OBJECTID_PLACEHOLDER'
+"""
+
+parks = f"""
+    with trailhead as (
+        {trailhead_subquery}
     ),
     parks as (
         select st_transform(geom, 26918) as geom
-        from openspace_delco
+        from openspace
     )
     select
         st_distance(p.geom, t.geom) as distance
@@ -27,11 +37,9 @@ parks = """
     limit 1
 """
 
-ipd = """
+ipd = f"""
     with trailhead as (
-        select st_transform(geom, 26918) as geom
-        from consolidated_trailheads
-        where gid = OBJECTID_PLACEHOLDER
+        {trailhead_subquery}
     ),
     equity as (
         select
@@ -49,11 +57,9 @@ ipd = """
     limit 1
 """
 
-employment = """
+employment = f"""
     with trailhead as (
-        select st_transform(geom, 26918) as geom
-        from consolidated_trailheads
-        where gid = OBJECTID_PLACEHOLDER
+        {isochrone_subquery}
     ),
     employment as (
         select
@@ -68,14 +74,12 @@ employment = """
     from
         employment e, trailhead t
     where
-        st_dwithin(e.geom, t.geom, 804.672)
+        st_within(e.geom, t.geom)
 """
 
-destinations = """
+destinations = f"""
     with trailhead as (
-        select st_transform(geom, 26918) as geom
-        from consolidated_trailheads
-        where gid = OBJECTID_PLACEHOLDER
+        {isochrone_subquery}
     ),
 
     destinations as (
@@ -86,19 +90,18 @@ destinations = """
     )
     select
         count(*) as number_of_destinations,	
-        array_agg (loc_type) as destination_types
+       loc_type as destination_type
     from
         destinations d, trailhead t
     where
-        st_dwithin(d.geom, t.geom, 804.672)
+        st_within(d.geom, t.geom)
     group by loc_type
+
 """
 
-septa = """
+septa = f"""
     with trailhead as (
-        select st_transform(geom, 26918) as geom
-        from consolidated_trailheads
-        where gid = OBJECTID_PLACEHOLDER
+        {isochrone_subquery}
     ),
     stops as (
         select
@@ -112,17 +115,14 @@ septa = """
     from
         stops s, trailhead t
     where
-        st_dwithin(s.geom, t.geom, 804.672)
+        st_within(s.geom, t.geom)
     group by
         s.lineabbr
 """
 
-population = """
+population = f"""
     with trailhead_buffer as (
-        select 
-            st_buffer(st_transform(geom, 26918), 804.672) as geom
-        from consolidated_trailheads
-        where gid = OBJECTID_PLACEHOLDER
+        {isochrone_subquery}
     ),
     blocks as (
         select
