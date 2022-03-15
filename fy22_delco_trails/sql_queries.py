@@ -16,7 +16,7 @@ trailhead_subquery = """
 
 isochrone_subquery = """
         select st_transform(geom, 26918) as geom
-        from isochrones_2mi
+        from isochrones_2mi_v2
         where poi_uid = 'OBJECTID_PLACEHOLDER'
 """
 
