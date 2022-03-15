@@ -23,6 +23,7 @@ dependencies:
   - rich
   - black
   - beautifulsoup4
+  - pandas-profiling
   - pip
   - pip:
       - git+https://github.com/aaronfraint/postgis-helpers.git
