@@ -68,7 +68,13 @@ def main():
 
     # Make a pandas profile report
     df = gdf.drop(columns=["geom"])
-    profile = ProfileReport(df, title="Trailhead Profiling Report", explorative=True)
+    df.to_csv("results_table.csv")
+    profile = ProfileReport(
+        df,
+        title="Trailhead Profiling Report",
+        minimal=True,
+        correlations={"cramers": {"calculate": False}},
+    )
     profile.to_file("trailhead_profile.html")
 
 
