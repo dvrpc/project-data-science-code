@@ -27,7 +27,7 @@ for idx, row in gdf.iterrows():
         vote_score = 5
 
     # C: add the score to the row in the new column
-    gdf["score_votes"] = vote_score
+    gdf.at[idx, "score_votes"] = vote_score
 
     # Population
     # ----------
