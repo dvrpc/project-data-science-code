@@ -1,7 +1,7 @@
 import geopandas as gpd
 
 # Read the geojson file with the query results
-gdf = gpd.read_file("./results.geojson")
+gdf = gpd.read_file("G:\Shared drives\FY22 Delaware County Bicycle Network Planning\Prioritization Analysis\analysis outputs\results.geojson")
 
 # Make new columns for all the scores, setting them all to zero by defauly
 gdf["score_votes"] = 0
@@ -66,8 +66,7 @@ for idx, row in gdf.iterrows():
 
     gdf.at[idx, "score_park"] = park_score
 
-    # IPD - how do I make ipd equal a qualitiative value (as opposed to a number value)? Also how do
-    # I make it equal qualitiative values?
+    # IPD 
     ipd = row["ipd_class"]
 
     if ipd == "Well Above Average":
@@ -170,7 +169,7 @@ for idx, row in gdf.iterrows():
 
     gdf.at[idx, "score_college"] = college_score 
 
-    # Public and private schools 
+    # Public and private schools - how do I referenced the sum of both fields?
     school = row["places_school"]
 
     if school > 9:
