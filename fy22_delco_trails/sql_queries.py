@@ -87,6 +87,7 @@ destinations = f"""
             st_transform(geom, 26918) as geom,
             loc_type
         from eta
+        where loc_type != 'School - College, University'
     )
     select
         count(*) as number_of_destinations,	
@@ -97,6 +98,43 @@ destinations = f"""
         st_within(d.geom, t.geom)
     group by loc_type
 
+"""
+
+higher_ed = f"""
+    with trailhead as (
+        {isochrone_subquery}
+    ),
+
+    destinations as (
+        select
+        	case when name in (
+				'Cabrini College',
+				'Valley Forge Military College',
+				'Delaware County Community College',
+				'Harris School of Business-Upper Darby Campus',
+				'Pennsylvania Institute of Technology',
+				'Neumann University',
+				'Delaware County Technical School-Practical Nursing Program',
+				'Widener University-Main Campus',
+				'Eastern University',
+				'Villanova University',
+				'Cheyney University of Pennsylvania',
+				'Pennsylvania State University-Penn State Brandywine',
+				'Swarthmore College')
+				then 'College'
+				else 'Other' end as place_type,
+            st_transform(geom, 26918) as geom
+        from eta
+        where loc_type = 'School - College, University'
+    )
+    select
+        count(*) as number_of_destinations,	
+       place_type
+    from
+        destinations d, trailhead t
+    where
+        st_within(d.geom, t.geom)
+    group by place_type
 """
 
 septa = f"""
