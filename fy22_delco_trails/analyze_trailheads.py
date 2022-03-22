@@ -11,6 +11,7 @@ from fy22_delco_trails.sql_queries import (
     destinations,
     septa,
     population,
+    higher_ed,
 )
 
 
@@ -33,7 +34,17 @@ db = Database.from_uri(LOCAL_ANALYSIS_DATABASE_URL)
 
 
 def main():
-    gdf = db.gdf("SELECT original_gid as uid, votes, geom FROM votes_from_webapp")
+    point_query = """
+        select
+            original_gid as uid,
+            votes,
+            st_clusterdbscan(geom, 402.336, 2) over() as clusterid,
+            geom
+        from
+            votes_from_webapp    
+    """
+
+    gdf = db.gdf(point_query)
 
     for idx, row in gdf.iterrows():
         uid = str(row.uid)
@@ -61,6 +72,10 @@ def main():
         add_data_to_df(gdf, idx, "number_of_transit_routes", len(transit_numbers))
         for result in transit_numbers:
             add_data_to_df(gdf, idx, f"stops_{result[1]}", result[0])
+
+        college_numbers = db.query_as_list_of_lists(higher_ed.replace("OBJECTID_PLACEHOLDER", uid))
+        for placetype in college_numbers:
+            add_data_to_df(gdf, idx, f"higher_ed_{placetype[1]}", placetype[0])
 
     # Write spatial result to disk
     gdf = gdf.to_crs(4326)
