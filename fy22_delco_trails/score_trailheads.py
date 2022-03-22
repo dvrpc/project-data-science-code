@@ -33,14 +33,16 @@ for idx, row in gdf.iterrows():
     votes = row["votes"]
 
     # B: apply the scoring logic
-    if votes == 5:
+    if votes >= 4:
         vote_score = 25
-    elif votes == 4:
+    elif votes == 3:
         vote_score = 15
-    elif 2 <= votes <= 3:
+    elif votes == 2:
         vote_score = 10
     elif votes == 1:
         vote_score = 5
+    else:
+        vote_score = 0
 
     # C: add the score to the row in the new column
     gdf.at[idx, "s_votes"] = vote_score
@@ -54,6 +56,8 @@ for idx, row in gdf.iterrows():
         pop_score = 2
     elif 15000 < pop <= 30000:
         pop_score = 1
+    else:
+        pop_score = 0
 
     gdf.at[idx, "s_population"] = pop_score
 
@@ -66,6 +70,8 @@ for idx, row in gdf.iterrows():
         park_score = 2
     elif 200 < park <= 800:
         park_score = 1
+    else:
+        park_score = 0
 
     gdf.at[idx, "s_park"] = park_score
 
@@ -80,6 +86,8 @@ for idx, row in gdf.iterrows():
         ipd_score = 3
     elif ipd in ["Well Below Average", "Below Average"]:
         ipd_score = 1
+    else:
+        ipd_score = 0
 
     gdf.at[idx, "s_ipd"] = ipd_score
 
@@ -92,6 +100,8 @@ for idx, row in gdf.iterrows():
         emp_score = 2
     elif 500 < emp <= 2000:
         emp_score = 1
+    else:
+        emp_score = 0
 
     gdf.at[idx, "s_employment"] = emp_score
 
@@ -104,6 +114,8 @@ for idx, row in gdf.iterrows():
         jobs_score = 2
     elif 5000 < jobs <= 10000:
         jobs_score = 1
+    else:
+        jobs_score = 0
 
     gdf.at[idx, "s_jobs"] = jobs_score
 
@@ -116,6 +128,8 @@ for idx, row in gdf.iterrows():
         dest_score = 2
     elif 1 <= dest <= 2:
         dest_score = 1
+    else:
+        dest_score = 0
 
     gdf.at[idx, "s_destination"] = dest_score
 
@@ -133,6 +147,8 @@ for idx, row in gdf.iterrows():
         act_score = 2
     elif 1 <= act <= 3:
         act_score = 1
+    else:
+        act_score = 0
 
     gdf.at[idx, "s_activitycenter"] = act_score
 
@@ -175,12 +191,25 @@ for idx, row in gdf.iterrows():
     gdf.at[idx, "s_health"] = health_score
 
     # Colleges
-    college = row["places_school_college_university"]
-    college_score = 0
+    colleges = row["higher_ed_college"]
+    other_higher_ed = row["higher_ed_other"]
 
-    if college:
-        if float(college) >= 1:
-            college_score = 4
+    if colleges:
+        colleges = float(colleges)
+    else:
+        colleges = 0
+
+    if other_higher_ed:
+        other_higher_ed = float(other_higher_ed)
+    else:
+        other_higher_ed = 0
+
+    if colleges > 0:
+        college_score = 4
+    elif colleges == 0 and other_higher_ed > 0:
+        college_score = 3
+    else:
+        college_score = 0
 
     gdf.at[idx, "s_college"] = college_score
 
@@ -204,6 +233,8 @@ for idx, row in gdf.iterrows():
         school_score = 2
     elif 1 <= school <= 2:
         school_score = 1
+    else:
+        school_score = 0
 
     gdf.at[idx, "s_school"] = school_score
 
@@ -221,8 +252,28 @@ for idx, row in gdf.iterrows():
         transit_score = 2
     elif 1 <= transit <= 3:
         transit_score = 1
+    else:
+        transit_score = 0
 
     gdf.at[idx, "s_transit"] = transit_score
+
+# Sum up the final score
+gdf["final_score"] = (
+    gdf["s_votes"]
+    + gdf["s_population"]
+    + gdf["s_park"]
+    + gdf["s_ipd"]
+    + gdf["s_employment"]
+    + gdf["s_job"]
+    + gdf["s_destination"]
+    + gdf["s_activitycenter"]
+    + gdf["s_food"]
+    + gdf["s_health"]
+    + gdf["s_college"]
+    + gdf["s_school"]
+    + gdf["s_transit"]
+)
+
 
 # After iterating over all rows, write to new file
 gdf.to_file(data_folder / "results_scored.geojson", driver="GeoJSON")
