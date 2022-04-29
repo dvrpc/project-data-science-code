@@ -22,7 +22,9 @@ target_network = [
     "Gloucester County, NJ",
 ]
 srid = 2272
-miles = 8.75  # 8.75 is half
+miles = (
+    8.75  # target isochrone size. in this case this is 15 minutes driving at 35 mph.
+)
 round_miles = round(miles)
 distance_threshold = (
     miles * 5280
@@ -31,11 +33,23 @@ distance_threshold = (
 
 def import_points(points):
     """imports target points into your postgres db, i.e. what you want isochrones around"""
-    print(GDRIVE_FOLDER)
     gdf = gpd.read_file(f"{GEOJSON_FOLDER}/{points}")
     print("importing target points into database...")
     gdf = gdf.to_crs(f"EPSG:{srid}")
     gdf.to_postgis("target_points", engine, schema=None, if_exists="replace")
+
+
+def import_taz(points):
+    """imports taz data"""
+    pass
+
+
+def import_attractions():
+    """imports attraction data"""
+    print("importing attractions points into database...")
+    gdf = gpd.read_file(f"{GEOJSON_FOLDER}/attractions.geojson")
+    gdf = gdf.to_crs(f"EPSG:{srid}")
+    gdf.to_postgis("attractions", engine, schema=None, if_exists="replace")
 
 
 def import_osmnx(target_network):
@@ -115,25 +129,160 @@ def make_hulls():
     hull_query = f"""
     drop table if exists isochrone_hull{round_miles};
     create table isochrone_hull{round_miles} as(
-        select iso_id, ST_ConcaveHull(ST_Union(geom), 0.80) as geom from isochrones
+        select iso_id, ST_ConcaveHull(ST_Union(geom), 0.80) as geom from isochrones{round_miles}
         group by iso_id
         );
-    select UpdateGeometrySRID('isochrone_hull','geom',{srid});
+    select UpdateGeometrySRID('isochrone_hull{round_miles}','geom',{srid});
     """
     print("Creating convex hulls around isochrones, just a moment...")
     engine.execute(hull_query)
     print("Isochrones and hulls created, see database for results.")
 
 
+def calculate_taz_demand():
+    """uses drive time isochrones to calculate taz demand for both 15 and 30 minutes using HHTS data"""
+    query = """drop table if exists to_from_15;
+    create table to_from_15 as
+    with nj_philly as(
+        SELECT
+        isochrone_hull9.iso_id
+        , coalesce(sum(nj_philly_rec_trips.trips),0) AS nj_philly_trips_to_driveshed
+        FROM isochrone_hull9 
+            LEFT JOIN nj_philly_rec_trips 
+            ON ST_Intersects(isochrone_hull9.geom, st_transform(nj_philly_rec_trips.geom, 2272)) 
+        GROUP BY isochrone_hull9.iso_id
+    ),
+    philly_nj as (
+    SELECT
+        isochrone_hull9.iso_id
+        , coalesce(sum(philly_nj_rec_trips.trips),0) AS philly_nj_trips_in_driveshed
+        FROM isochrone_hull9 
+            LEFT JOIN philly_nj_rec_trips 
+            ON ST_Intersects(isochrone_hull9.geom, st_transform(philly_nj_rec_trips.geom, 2272)) 
+        GROUP BY isochrone_hull9.iso_id
+    ), to_from_total as(
+        select philly_nj.iso_id, philly_nj_trips_in_driveshed, nj_philly.nj_philly_trips_to_driveshed from philly_nj
+        inner join nj_philly
+        on philly_nj.iso_id = nj_philly.iso_id)
+        select * from to_from_total;
+    drop table if exists to_from_joined15;
+    create table to_from_joined15 as (
+    SELECT tp.geometry, iso_id, philly_nj_trips_in_driveshed, nj_philly_trips_to_driveshed, COALESCE(philly_nj_trips_in_driveshed ,0) + COALESCE(nj_philly_trips_to_driveshed ,0) as sum
+    FROM to_from_15
+    inner join target_points tp
+    on to_from_15.iso_id = tp.id);
+    drop table if exists to_from_30;
+    create table to_from_30 as
+    with nj_philly as(
+        SELECT
+        isochrone_hull18.iso_id
+        , coalesce(sum(nj_philly_rec_trips.trips),0) AS nj_philly_trips_to_driveshed
+        FROM isochrone_hull18 
+            LEFT JOIN nj_philly_rec_trips 
+            ON ST_Intersects(isochrone_hull18.geom, st_transform(nj_philly_rec_trips.geom, 2272)) 
+        GROUP BY isochrone_hull18.iso_id
+    ),
+    philly_nj as (
+        SELECT
+        isochrone_hull18.iso_id
+        , coalesce(sum(philly_nj_rec_trips.trips),0) AS philly_nj_trips_in_driveshed
+        FROM isochrone_hull18 
+            LEFT JOIN philly_nj_rec_trips 
+            ON ST_Intersects(isochrone_hull18.geom, st_transform(philly_nj_rec_trips.geom, 2272)) 
+        GROUP BY isochrone_hull18.iso_id
+    ), to_from_total as(
+        select philly_nj.iso_id, philly_nj_trips_in_driveshed, nj_philly.nj_philly_trips_to_driveshed from philly_nj
+        inner join nj_philly
+        on philly_nj.iso_id = nj_philly.iso_id)
+        select * from to_from_total;
+    drop table if exists to_from_joined30;
+    create table to_from_joined30 as (
+        SELECT tp.geometry, iso_id, philly_nj_trips_in_driveshed, nj_philly_trips_to_driveshed, COALESCE(philly_nj_trips_in_driveshed ,0) + COALESCE(nj_philly_trips_to_driveshed ,0) as sum
+        FROM to_from_30
+        inner join target_points tp
+        on to_from_30.iso_id = tp.id);
+    drop table if exists to_from_15_30;
+    create table to_from_15_30 as(
+        select 
+            tf15.iso_id, 
+            tf15.philly_nj_trips_in_driveshed as philly_nj_15, 
+            tf30.philly_nj_trips_in_driveshed as philly_nj_30,
+            tf15.nj_philly_trips_to_driveshed as nj_philly_15,
+            tf30.nj_philly_trips_to_driveshed as nj_philly_30,
+            tf15.geometry as geom
+        from to_from_joined15 tf15
+        inner join to_from_joined30 tf30
+        on tf15.iso_id = tf30.iso_id);
+    drop table if exists to_from_15;
+    drop table if exists to_from_30;
+    drop table if exists to_from_joined;
+    drop table if exists to_from_joined15;
+    drop table if exists to_from_joined30;
+    """
+    engine.execute(query)
+    print("HHTS demand created, check database for final table")
+
+
+def calculate_attractions_and_demand_in_isos():
+    calculate_taz_demand()
+    """calculates number of attractions within isochrones. has to be run after previous function."""
+    query = """drop table if exists attractions30;
+    create table attractions30 as(
+    select iso_id, count(attractions) as attractions_30_min
+        FROM isochrone_hull18 
+        LEFT JOIN attractions 
+        ON st_within(attractions.geometry, isochrone_hull18.geom) 
+        GROUP BY isochrone_hull18.iso_id
+        order by iso_id);
+    drop table if exists attractions15;
+    create table attractions15 as(
+        select iso_id, count(attractions) as attractions_15_min
+        FROM isochrone_hull9
+        LEFT JOIN attractions 
+        ON st_within(attractions.geometry, isochrone_hull9.geom) 
+        GROUP BY isochrone_hull9.iso_id
+        order by iso_id);
+    select * from attractions15
+    inner join attractions30 
+    on attractions15.iso_id = attractions30.iso_id;
+    drop table if exists attractions_in_isochrones;
+    create table attractions_in_isochrones as(
+        select attractions15.iso_id, attractions15.attractions_15_min, attractions30.attractions_30_min
+        from attractions15
+        inner join attractions30
+        on attractions15.iso_id = attractions30.iso_id);
+    drop table if exists attractions15;
+    drop table if exists attractions30;
+    alter table to_from_15_30
+        add column attractions15 varchar(50);
+    alter table to_from_15_30
+        add column attractions30 varchar(50);
+    update to_from_15_30 
+    set attractions15 = attractions_in_isochrones.attractions_15_min 
+    from attractions_in_isochrones
+    where attractions_in_isochrones.iso_id=to_from_15_30.iso_id;
+    update to_from_15_30 
+    set attractions30 = attractions_in_isochrones.attractions_30_min 
+    from attractions_in_isochrones
+    where attractions_in_isochrones.iso_id=to_from_15_30.iso_id;"""
+    print("calculating number of attractions in each isochrone...")
+    engine.execute(query)
+
+
 if __name__ == "__main__":
     # import_points("dock_no_freight.geojson")
     # import_osmnx(target_network)
+    # import_taz()
+    # import_attractions()
 
     # osmnx_to_pg_routing()
-    neighbor_obj = nearest_neighbor()
-    make_isochrones(neighbor_obj[0], neighbor_obj[1])
-    make_hulls()
+    # neighbor_obj = nearest_neighbor()
+    # make_isochrones(neighbor_obj[0], neighbor_obj[1])
+    # make_hulls()
+    calculate_attractions_and_demand_in_isos()
 
     # engine.dispose()
 
     # todo: do we need "len_feet" column? is it useful/used anywhere, if not, should be deleted as it's confusing since units are dynamic now
+    # todo: calculate population function (need data at taz level)
+    # todo: add second isochrone to calculate taz demand function to make sure both shapes are captured
