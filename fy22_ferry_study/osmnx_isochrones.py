@@ -39,7 +39,7 @@ def import_points(points):
     gdf.to_postgis("target_points", engine, schema=None, if_exists="replace")
 
 
-def import_taz(points):
+def import_taz():
     """imports taz data"""
     pass
 
@@ -285,4 +285,4 @@ if __name__ == "__main__":
 
     # todo: do we need "len_feet" column? is it useful/used anywhere, if not, should be deleted as it's confusing since units are dynamic now
     # todo: calculate population function (need data at taz level)
-    # todo: add second isochrone to calculate taz demand function to make sure both shapes are captured
+    # add taz automation, insertion of philly_nj and nj_philly tables
