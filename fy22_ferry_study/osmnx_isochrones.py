@@ -4,7 +4,6 @@ from sqlalchemy import create_engine
 import os
 from dotenv import load_dotenv
 import osmnx as ox
-import urllib
 
 load_dotenv()
 GDRIVE_FOLDER = os.getenv("GDRIVE_PROJECT_FOLDER")
