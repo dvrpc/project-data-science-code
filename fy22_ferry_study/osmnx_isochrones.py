@@ -86,16 +86,16 @@ def osmnx_to_pg_routing():
     query = f"""
         drop table if exists osmnx;
         create table osmnx as(
-        select fid as id,
+        select
             "from"::bigint as "source",
             "to"::bigint as target,
             "name",
-            st_length(st_transform(geom,{srid})) * 3.28084 as len_feet,
-            st_length(st_transform(geom,{srid})) as real_length,
+            st_length(st_transform(geometry,{srid})) * 3.28084 as len_feet,
+            st_length(st_transform(geometry,{srid})) as real_length,
             1000000000 as reverse_cost,
-            st_transform(geom, {srid}) as geom
+            st_transform(geometry, {srid}) as geom
         from edges
-        where geom is not null
+        where geometry is not null
     ); 
     SELECT UpdateGeometrySRID('osmnx','geom',{srid});
      """
@@ -104,6 +104,7 @@ def osmnx_to_pg_routing():
 
 # todo: cleanup nearest neighbor so it's more modular
 def nearest_neighbor():
+    """finds the nearest node on the network to target point"""
     query = f"""
        drop table if exists points;
         create table points as (
@@ -122,6 +123,7 @@ def nearest_neighbor():
 
 
 def make_isochrones(neighbors, list_of_ids):
+    """generates isochrones using pgrouting query"""
     drop_query = f"""drop table if exists isochrones{round_miles};"""
     engine.execute(drop_query)
     count = 0
@@ -343,18 +345,14 @@ if __name__ == "__main__":
     # import_taz()
     # import_attractions()
     # import_dvrpc_munis()
-
-    # osmnx_to_pg_routing()
-    # neighbor_obj = nearest_neighbor()
-    # make_isochrones(neighbor_obj[0], neighbor_obj[1])
-    # make_hulls()
-    # calculate_attractions_and_demand_in_isos()
+    osmnx_to_pg_routing()
+    neighbor_obj = nearest_neighbor()
+    make_isochrones(neighbor_obj[0], neighbor_obj[1])
+    make_hulls()
+    calculate_attractions_and_demand_in_isos()
     calculate_population_in_isos(15)
     calculate_population_in_isos(30)
     pickup_munis()
 
-    # engine.dispose()
-
     # todo: do we need "len_feet" column? is it useful/used anywhere, if not, should be deleted as it's confusing since units are dynamic now
-    # todo: calculate population function (need data at taz level)
-    # add taz automation, insertion of philly_nj and nj_philly tables
+    # todo: add taz automation, insertion of philly_nj and nj_philly tables
