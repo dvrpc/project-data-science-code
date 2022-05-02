@@ -54,7 +54,7 @@ def import_taz():
 
 def import_dvrpc_munis():
     """imports dvrpc municipalities"""
-    url = "https://arcgis.dvrpc.org/portal/rest/services/Boundaries/MunicipalBoundaries/FeatureServer/0/query?where=dvrpc_reg%20%3D%20'YES'&outFields=*&outSR=4326&f=json"
+    url = "https://arcgis.dvrpc.org/portal/rest/services/Boundaries/MunicipalBoundaries/FeatureServer/0/query?where=dvrpc_reg%20%3D%20'Yes'&outFields=*&outSR=4326&f=json"
     gdf = gpd.read_file(url)
     print("importing dvrpc municipal boundaries into database...")
     gdf = gdf.to_crs(f"EPSG:{srid}")
@@ -75,10 +75,11 @@ def import_osmnx(target_network):
     ox.io.save_graph_geopackage(
         G, filepath=f"{GEOJSON_FOLDER} /graph.gpkg", encoding="utf-8", directed=False
     )
-    os.system(f"cd '{GEOJSON_FOLDER}'")
-    os.system(
-        f"ogr2ogr -f PostgreSQL 'PG:user={USER} password={PW} dbname={DB_NAME}' '{GEOJSON_FOLDER}/graph.gpkg' -progress -overwrite -t_srs EPSG:{srid}"
-    )
+    gdf = gpd.read_file(f"{GEOJSON_FOLDER}/graph.gpkg", layer="edges")
+    gdf.to_postgis("edges", engine, schema=None, if_exists="replace")
+
+    gdf = gpd.read_file(f"{GEOJSON_FOLDER}/graph.gpkg", layer="nodes")
+    gdf.to_postgis("nodes", engine, schema=None, if_exists="replace")
 
 
 def osmnx_to_pg_routing():
