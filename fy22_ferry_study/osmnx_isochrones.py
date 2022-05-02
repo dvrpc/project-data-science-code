@@ -75,10 +75,14 @@ def import_osmnx(target_network):
         G, filepath=f"{GEOJSON_FOLDER} /graph.gpkg", encoding="utf-8", directed=False
     )
     gdf = gpd.read_file(f"{GEOJSON_FOLDER}/graph.gpkg", layer="edges")
-    gdf.to_postgis("edges", engine, schema=None, if_exists="replace")
+    gdf.to_postgis(
+        "edges", engine, schema=None, if_exists="replace", index=True, index_label="fid"
+    )
 
     gdf = gpd.read_file(f"{GEOJSON_FOLDER}/graph.gpkg", layer="nodes")
-    gdf.to_postgis("nodes", engine, schema=None, if_exists="replace")
+    gdf.to_postgis(
+        "nodes", engine, schema=None, if_exists="replace", index=True, index_label="fid"
+    )
 
 
 def osmnx_to_pg_routing():
@@ -87,6 +91,7 @@ def osmnx_to_pg_routing():
         drop table if exists osmnx;
         create table osmnx as(
         select
+            index_label as id,
             "from"::bigint as "source",
             "to"::bigint as target,
             "name",
@@ -341,18 +346,18 @@ def pickup_munis():
 
 if __name__ == "__main__":
     # import_points("dock_no_freight.geojson")
-    # import_osmnx(target_network)
+    import_osmnx(target_network)
     # import_taz()
     # import_attractions()
     # import_dvrpc_munis()
     osmnx_to_pg_routing()
-    neighbor_obj = nearest_neighbor()
-    make_isochrones(neighbor_obj[0], neighbor_obj[1])
-    make_hulls()
-    calculate_attractions_and_demand_in_isos()
-    calculate_population_in_isos(15)
-    calculate_population_in_isos(30)
-    pickup_munis()
+    # neighbor_obj = nearest_neighbor()
+    # make_isochrones(neighbor_obj[0], neighbor_obj[1])
+    # make_hulls()
+    # calculate_attractions_and_demand_in_isos()
+    # calculate_population_in_isos(15)
+    # calculate_population_in_isos(30)
+    # pickup_munis()
 
     # todo: do we need "len_feet" column? is it useful/used anywhere, if not, should be deleted as it's confusing since units are dynamic now
     # todo: add taz automation, insertion of philly_nj and nj_philly tables
