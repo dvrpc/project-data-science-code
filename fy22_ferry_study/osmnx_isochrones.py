@@ -157,6 +157,7 @@ def make_hulls():
 
 
 def calculate_taz_demand():
+    # ripe for refactoring, variablize isohulls
     """uses drive time isochrones to calculate taz demand for both 15 and 30 minutes using HHTS data"""
     query = """drop table if exists to_from_15;
     create table to_from_15 as
@@ -288,22 +289,47 @@ def calculate_attractions_and_demand_in_isos():
     engine.execute(query)
 
 
-def calculate_population_in_isos():
-    pass
+def calculate_population_in_isos(iso_distance):
+    """calculates population for isochrone distance (in minutes) and adds new column to master table"""
+
+    if iso_distance == 15:
+        iso_hull = 9
+    if iso_distance == 30:
+        iso_hull = 18
+    else:
+        print(
+            "iso distance not in current script, must edit it for different size isochrones"
+        )
+    query = f"""alter table to_from_15_30 
+    drop column if exists pop{iso_distance};
+    alter table to_from_15_30
+    add column pop{iso_distance} varchar(50);
+    UPDATE to_from_15_30 
+    SET pop{iso_distance}=subquery.population
+    FROM (select ih.iso_id, sum(population) as population from taz_pop tp 
+        inner join isochrone_hull{iso_hull} ih 
+        on st_intersects(ih.geom,tp.geometry)
+        group by ih.iso_id
+        order by ih.iso_id) AS subquery
+    WHERE to_from_15_30.iso_id=subquery.iso_id;"""
+    print(f"calculating total population in the {iso_distance}-minute shed...")
+    engine.execute(query)
 
 
 if __name__ == "__main__":
-    # import_points("dock_no_freight.geojson")
-    # import_osmnx(target_network)
-    # import_taz()
-    # import_attractions()
+    import_points("dock_no_freight.geojson")
+    import_osmnx(target_network)
+    import_taz()
+    import_attractions()
     import_dvrpc_munis()
 
-    # osmnx_to_pg_routing()
-    # neighbor_obj = nearest_neighbor()
-    # make_isochrones(neighbor_obj[0], neighbor_obj[1])
-    # make_hulls()
-    # calculate_attractions_and_demand_in_isos()
+    osmnx_to_pg_routing()
+    neighbor_obj = nearest_neighbor()
+    make_isochrones(neighbor_obj[0], neighbor_obj[1])
+    make_hulls()
+    calculate_attractions_and_demand_in_isos()
+    calculate_population_in_isos(15)
+    calculate_population_in_isos(30)
 
     # engine.dispose()
 
