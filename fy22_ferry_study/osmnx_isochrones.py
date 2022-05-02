@@ -316,20 +316,42 @@ def calculate_population_in_isos(iso_distance):
     engine.execute(query)
 
 
-if __name__ == "__main__":
-    import_points("dock_no_freight.geojson")
-    import_osmnx(target_network)
-    import_taz()
-    import_attractions()
-    import_dvrpc_munis()
+def pickup_munis():
+    """joins the master table with dvprc municipalities for better identification of points"""
+    query = """
+    alter table to_from_15_30 
+    drop column if exists muni;
+    alter table to_from_15_30
+    add column muni varchar(50);
+    UPDATE to_from_15_30 
+    SET muni=subquery.mun_name
+    FROM (select 
+        id, dvrpc_munis.mun_name
+        from target_points tp
+        inner join dvrpc_munis
+        on st_intersects(tp.geometry, dvrpc_munis.geometry)
+        group by id, dvrpc_munis.mun_name
+        order by id) AS subquery
+    WHERE to_from_15_30.iso_id=subquery.id;"""
+    print(f"joining main table to DVRPC municipalities...")
+    engine.execute(query)
 
-    osmnx_to_pg_routing()
-    neighbor_obj = nearest_neighbor()
-    make_isochrones(neighbor_obj[0], neighbor_obj[1])
-    make_hulls()
-    calculate_attractions_and_demand_in_isos()
+
+if __name__ == "__main__":
+    # import_points("dock_no_freight.geojson")
+    # import_osmnx(target_network)
+    # import_taz()
+    # import_attractions()
+    # import_dvrpc_munis()
+
+    # osmnx_to_pg_routing()
+    # neighbor_obj = nearest_neighbor()
+    # make_isochrones(neighbor_obj[0], neighbor_obj[1])
+    # make_hulls()
+    # calculate_attractions_and_demand_in_isos()
     calculate_population_in_isos(15)
     calculate_population_in_isos(30)
+    pickup_munis()
 
     # engine.dispose()
 
