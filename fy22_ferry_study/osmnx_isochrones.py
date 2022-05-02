@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 import os
 from dotenv import load_dotenv
 import osmnx as ox
+import urllib
 
 load_dotenv()
 GDRIVE_FOLDER = os.getenv("GDRIVE_PROJECT_FOLDER")
@@ -40,8 +41,24 @@ def import_points(points):
 
 
 def import_taz():
-    """imports taz data"""
-    pass
+    """imports taz population data from g drive"""
+    zipfile = "/Volumes/GoogleDrive/Shared drives/Community & Economic Development /Ferry Service Feasibility_FY22/Shapefiles/CTPP2012_2016_total_pop_taz.zip"
+    gdf = gpd.read_file(zipfile)
+    gdf.rename(
+        columns={"F0": "population", "F1": "moe", "name": "taz_name"}, inplace=True
+    )
+    print("importing taz polygons with population into database...")
+    gdf = gdf.to_crs(f"EPSG:{srid}")
+    gdf.to_postgis("taz_pop", engine, schema=None, if_exists="replace")
+
+
+def import_dvrpc_munis():
+    """imports dvrpc municipalities"""
+    url = "https://arcgis.dvrpc.org/portal/rest/services/Boundaries/MunicipalBoundaries/FeatureServer/0/query?where=dvrpc_reg%20%3D%20'YES'&outFields=*&outSR=4326&f=json"
+    gdf = gpd.read_file(url)
+    print("importing dvrpc municipal boundaries into database...")
+    gdf = gdf.to_crs(f"EPSG:{srid}")
+    gdf.to_postgis("dvrpc_munis", engine, schema=None, if_exists="replace")
 
 
 def import_attractions():
@@ -224,6 +241,8 @@ def calculate_taz_demand():
 
 
 def calculate_attractions_and_demand_in_isos():
+    """calculates the HHTS demand and the number of attractions for each isochrone_id"""
+    # todo: refactor with variables rather than reqpeating slightly different query
     calculate_taz_demand()
     """calculates number of attractions within isochrones. has to be run after previous function."""
     query = """drop table if exists attractions30;
@@ -269,17 +288,22 @@ def calculate_attractions_and_demand_in_isos():
     engine.execute(query)
 
 
+def calculate_population_in_isos():
+    pass
+
+
 if __name__ == "__main__":
     # import_points("dock_no_freight.geojson")
     # import_osmnx(target_network)
     # import_taz()
     # import_attractions()
+    import_dvrpc_munis()
 
     # osmnx_to_pg_routing()
     # neighbor_obj = nearest_neighbor()
     # make_isochrones(neighbor_obj[0], neighbor_obj[1])
     # make_hulls()
-    calculate_attractions_and_demand_in_isos()
+    # calculate_attractions_and_demand_in_isos()
 
     # engine.dispose()
 
