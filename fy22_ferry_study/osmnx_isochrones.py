@@ -155,7 +155,7 @@ def make_hulls(minutes):
         );
     select UpdateGeometrySRID('isochrone_hull{minutes}_minutes','geom',{srid});
     """
-    print("Creating convex hulls around isochrones, just a moment...")
+    print(f"Creating convex hulls around {minutes}-minute isochrones, just a moment...")
     engine.execute(hull_query)
     print("Isochrones and hulls created, see database for results.")
 
@@ -293,30 +293,29 @@ def calculate_attractions_and_demand_in_isos():
     engine.execute(query)
 
 
-def calculate_population_in_isos(iso_distance):
+def calculate_population_in_isos(minutes):
     """calculates population for isochrone distance (in minutes) and adds new column to master table"""
-
-    if iso_distance == 15:
+    if minutes == 15:
         iso_hull = 9
-    elif iso_distance == 30:
+    elif minutes == 30:
         iso_hull = 18
     else:
         print(
             "iso distance not in current script, must edit it for different size isochrones"
         )
     query = f"""alter table to_from_15_30 
-    drop column if exists pop{iso_distance};
+    drop column if exists pop{minutes};
     alter table to_from_15_30
-    add column pop{iso_distance} varchar(50);
+    add column pop{minutes} varchar(50);
     UPDATE to_from_15_30 
-    SET pop{iso_distance}=subquery.population
+    SET pop{minutes}=subquery.population
     FROM (select ih.iso_id, sum(population) as population from taz_pop tp 
         inner join isochrone_hull{iso_hull} ih 
         on st_intersects(ih.geom,tp.geometry)
         group by ih.iso_id
         order by ih.iso_id) AS subquery
     WHERE to_from_15_30.iso_id=subquery.iso_id;"""
-    print(f"calculating total population in the {iso_distance}-minute shed...")
+    print(f"calculating total population in the {minutes}-minute shed...")
     engine.execute(query)
 
 
