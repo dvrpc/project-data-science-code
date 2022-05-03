@@ -91,7 +91,7 @@ def osmnx_to_pg_routing():
         drop table if exists osmnx;
         create table osmnx as(
         select
-            index_label as id,
+            fid as id,
             "from"::bigint as "source",
             "to"::bigint as target,
             "name",
@@ -301,7 +301,7 @@ def calculate_population_in_isos(iso_distance):
 
     if iso_distance == 15:
         iso_hull = 9
-    if iso_distance == 30:
+    elif iso_distance == 30:
         iso_hull = 18
     else:
         print(
@@ -346,18 +346,18 @@ def pickup_munis():
 
 if __name__ == "__main__":
     # import_points("dock_no_freight.geojson")
-    import_osmnx(target_network)
+    # import_osmnx(target_network)
     # import_taz()
     # import_attractions()
     # import_dvrpc_munis()
-    osmnx_to_pg_routing()
+    # osmnx_to_pg_routing()
     # neighbor_obj = nearest_neighbor()
     # make_isochrones(neighbor_obj[0], neighbor_obj[1])
     # make_hulls()
-    # calculate_attractions_and_demand_in_isos()
-    # calculate_population_in_isos(15)
-    # calculate_population_in_isos(30)
-    # pickup_munis()
+    calculate_attractions_and_demand_in_isos()
+    calculate_population_in_isos(15)
+    calculate_population_in_isos(30)
+    pickup_munis()
 
     # todo: do we need "len_feet" column? is it useful/used anywhere, if not, should be deleted as it's confusing since units are dynamic now
     # todo: add taz automation, insertion of philly_nj and nj_philly tables
