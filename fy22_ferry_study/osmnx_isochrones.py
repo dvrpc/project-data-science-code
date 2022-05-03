@@ -22,13 +22,6 @@ target_network = [
     "Gloucester County, NJ",
 ]
 srid = 2272
-miles = (
-    8.75  # target isochrone size. in this case this is 15 minutes driving at 35 mph.
-)
-round_miles = round(miles)
-distance_threshold = (
-    miles * 5280
-)  # the distance, in the units of above SRID, of the isochrone using the network
 
 
 def import_points(points):
@@ -108,28 +101,32 @@ def osmnx_to_pg_routing():
 
 
 # todo: cleanup nearest neighbor so it's more modular
-def nearest_neighbor():
+def nearest_node():
     """finds the nearest node on the network to target point"""
     query = f"""
-       drop table if exists points;
-        create table points as (
+       drop table if exists nearest_node;
+        create table nearest_node as (
             select target_points.id as id, 
             (select osmnx."source" from osmnx order by st_distance(st_transform(target_points.geometry, {srid}),osmnx.geom) 
             limit 1) as osmnx_id, st_transform(target_points.geometry, {srid}) as geom from target_points);
-            select UpdateGeometrySRID('points','geom',{srid});
+            select UpdateGeometrySRID('nearest_node','geom',{srid});
             """
 
     engine.execute(query)
-    df = pd.read_sql('select osmnx_id from "points"', dbConnection)
+    df = pd.read_sql('select osmnx_id from "nearest_node"', dbConnection)
     neighbors = df.values.tolist()
-    df2 = pd.read_sql('select id from "points"', dbConnection)
+    df2 = pd.read_sql('select id from "nearest_node"', dbConnection)
     list_of_ids = df2.values.tolist()
     return neighbors, list_of_ids
 
 
-def make_isochrones(neighbors, list_of_ids):
+def make_isochrones(neighbors, list_of_ids, minutes, speed_mph):
+    miles = (minutes / 60) * speed_mph  # represents distance of isochrone
+    distance_threshold = (
+        miles * 5280
+    )  # the distance, in the units of above SRID, of the isochrone using the network
     """generates isochrones using pgrouting query"""
-    drop_query = f"""drop table if exists isochrones{round_miles};"""
+    drop_query = f"""drop table if exists isochrones{minutes};"""
     engine.execute(drop_query)
     count = 0
     for value, id in zip(neighbors, list_of_ids):
@@ -144,19 +141,19 @@ def make_isochrones(neighbors, list_of_ids):
         tempgdf = gpd.GeoDataFrame.from_postgis(isochrone_query, engine)
         tempgdf["iso_id"] = id[0]
         tempgdf = tempgdf.set_crs(f"EPSG:{srid}")
-        print(f"Creating isochrone # {count}...")
+        print(f"Creating {minutes}-minute isochrone # {count}...")
         count += 1
-        tempgdf.to_postgis(f"isochrones{round_miles}", engine, if_exists="append")
+        tempgdf.to_postgis(f"isochrones{minutes}_minutes", engine, if_exists="append")
 
 
-def make_hulls():
+def make_hulls(minutes):
     hull_query = f"""
-    drop table if exists isochrone_hull{round_miles};
-    create table isochrone_hull{round_miles} as(
-        select iso_id, ST_ConcaveHull(ST_Union(geom), 0.80) as geom from isochrones{round_miles}
+    drop table if exists isochrone_hull{minutes}_minutes;
+    create table isochrone_hull{minutes}_minutes as(
+        select iso_id, ST_ConcaveHull(ST_Union(geom), 0.80) as geom from isochrones{minutes}_minutes
         group by iso_id
         );
-    select UpdateGeometrySRID('isochrone_hull{round_miles}','geom',{srid});
+    select UpdateGeometrySRID('isochrone_hull{minutes}_minutes','geom',{srid});
     """
     print("Creating convex hulls around isochrones, just a moment...")
     engine.execute(hull_query)
@@ -351,9 +348,11 @@ if __name__ == "__main__":
     # import_attractions()
     # import_dvrpc_munis()
     # osmnx_to_pg_routing()
-    # neighbor_obj = nearest_neighbor()
-    # make_isochrones(neighbor_obj[0], neighbor_obj[1])
-    # make_hulls()
+    neighbor_obj = nearest_node()
+    make_isochrones(neighbor_obj[0], neighbor_obj[1], 15, 35)
+    make_isochrones(neighbor_obj[0], neighbor_obj[1], 30, 35)
+    make_hulls(15)
+    make_hulls(30)
     calculate_attractions_and_demand_in_isos()
     calculate_population_in_isos(15)
     calculate_population_in_isos(30)
