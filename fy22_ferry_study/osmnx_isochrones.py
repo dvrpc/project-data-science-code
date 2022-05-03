@@ -294,15 +294,9 @@ def calculate_attractions_and_demand_in_isos():
 
 
 def calculate_population_in_isos(minutes):
+
     """calculates population for isochrone distance (in minutes) and adds new column to master table"""
-    if minutes == 15:
-        iso_hull = 9
-    elif minutes == 30:
-        iso_hull = 18
-    else:
-        print(
-            "iso distance not in current script, must edit it for different size isochrones"
-        )
+
     query = f"""alter table to_from_15_30 
     drop column if exists pop{minutes};
     alter table to_from_15_30
@@ -310,7 +304,7 @@ def calculate_population_in_isos(minutes):
     UPDATE to_from_15_30 
     SET pop{minutes}=subquery.population
     FROM (select ih.iso_id, sum(population) as population from taz_pop tp 
-        inner join isochrone_hull{iso_hull} ih 
+        inner join isochrone_hull{minutes} ih 
         on st_intersects(ih.geom,tp.geometry)
         group by ih.iso_id
         order by ih.iso_id) AS subquery
