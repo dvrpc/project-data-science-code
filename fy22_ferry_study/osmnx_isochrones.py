@@ -162,97 +162,58 @@ def make_hulls(minutes):
 
 def calculate_taz_demand(minutes):
     # ripe for refactoring, variablize isohulls
-    """uses drive time isochrones to calculate taz demand for both 15 and 30 minutes using HHTS data"""
-    query = f"""drop table if exists to_from_15;
-    create table to_from_15 as
+    """uses drive time isochrones to calculate taz demand for an isochrone of a given timeframe"""
+    query = f"""drop table if exists to_from{minutes};
+    create table to_from{minutes} as
     with nj_philly as(
         SELECT
         isochrone_hull{minutes}_minutes.iso_id
-        , coalesce(sum(nj_philly_rec_trips.trips),0) AS nj_philly_trips_to_driveshed
+        , coalesce(sum(nj_philly_rec_trips.trips),0) AS nj_philly_trips_in_driveshed
         FROM isochrone_hull{minutes}_minutes 
             LEFT JOIN nj_philly_rec_trips 
             ON ST_Intersects(isochrone_hull{minutes}_minutes.geom, st_transform(nj_philly_rec_trips.geom, 2272)) 
         GROUP BY isochrone_hull{minutes}_minutes.iso_id
     ),
-    philly_nj as (
+    philly_nj as(
     SELECT
         isochrone_hull{minutes}_minutes.iso_id
         , coalesce(sum(philly_nj_rec_trips.trips),0) AS philly_nj_trips_in_driveshed
         FROM isochrone_hull{minutes}_minutes 
             LEFT JOIN philly_nj_rec_trips 
             ON ST_Intersects(isochrone_hull{minutes}_minutes.geom, st_transform(philly_nj_rec_trips.geom, 2272)) 
-        GROUP BY isochrone_hull{minutes}_minutes.iso_id
-    ), to_from_total as(
-        select philly_nj.iso_id, philly_nj_trips_in_driveshed, nj_philly.nj_philly_trips_to_driveshed from philly_nj
-        inner join nj_philly
-        on philly_nj.iso_id = nj_philly.iso_id)
-        select * from to_from_total;
-    drop table if exists to_from_joined15;
-    create table to_from_joined15 as (
-    SELECT tp.geometry, iso_id, philly_nj_trips_in_driveshed, nj_philly_trips_to_driveshed, COALESCE(philly_nj_trips_in_driveshed ,0) + COALESCE(nj_philly_trips_to_driveshed ,0) as sum
-    FROM to_from_15
-    inner join target_points tp
-    on to_from_15.iso_id = tp.id);
-    drop table if exists to_from_30;
-    create table to_from_30 as
-    with nj_philly as(
-        SELECT
-        isochrone_hull{minutes}_minutes.iso_id
-        , coalesce(sum(nj_philly_rec_trips.trips),0) AS nj_philly_trips_to_driveshed
-        FROM isochrone_hull{minutes}_minutes 
-            LEFT JOIN nj_philly_rec_trips 
-            ON ST_Intersects(isochrone_hull{minutes}_minutes.geom, st_transform(nj_philly_rec_trips.geom, 2272)) 
-        GROUP BY isochrone_hull{minutes}_minutes.iso_id
-    ),
-    philly_nj as (
-        SELECT
-        isochrone_hull{minutes}_minutes.iso_id
-        , coalesce(sum(philly_nj_rec_trips.trips),0) AS philly_nj_trips_in_driveshed
-        FROM isochrone_hull{minutes}_minutes 
-            LEFT JOIN philly_nj_rec_trips 
-            ON ST_Intersects(isochrone_hull{minutes}_minutes.geom, st_transform(philly_nj_rec_trips.geom, 2272)) 
-        GROUP BY isochrone_hull{minutes}_minutes.iso_id
-    ), to_from_total as(
-        select philly_nj.iso_id, philly_nj_trips_in_driveshed, nj_philly.nj_philly_trips_to_driveshed from philly_nj
-        inner join nj_philly
-        on philly_nj.iso_id = nj_philly.iso_id)
-        select * from to_from_total;
-    drop table if exists to_from_joined30;
-    create table to_from_joined30 as (
-        SELECT tp.geometry, iso_id, philly_nj_trips_in_driveshed, nj_philly_trips_to_driveshed, COALESCE(philly_nj_trips_in_driveshed ,0) + COALESCE(nj_philly_trips_to_driveshed ,0) as sum
-        FROM to_from_30
-        inner join target_points tp
-        on to_from_30.iso_id = tp.id);
-    drop table if exists to_from_15_30;
-    create table to_from_15_30 as(
-        select 
-            tf15.iso_id, 
-            tf15.philly_nj_trips_in_driveshed as philly_nj_15, 
-            tf30.philly_nj_trips_in_driveshed as philly_nj_30,
-            tf15.nj_philly_trips_to_driveshed as nj_philly_15,
-            tf30.nj_philly_trips_to_driveshed as nj_philly_30,
-            tf15.geometry as geom
-        from to_from_joined15 tf15
-        inner join to_from_joined30 tf30
-        on tf15.iso_id = tf30.iso_id);
-    drop table if exists to_from_15;
-    drop table if exists to_from_30;
-    drop table if exists to_from_joined;
-    drop table if exists to_from_joined15;
-    drop table if exists to_from_joined30;
+        GROUP BY isochrone_hull{minutes}_minutes.iso_id)
+    select philly_nj.iso_id, philly_nj_trips_in_driveshed, nj_philly.nj_philly_trips_in_driveshed from philly_nj
+    inner join nj_philly 
+    on philly_nj.iso_id=nj_philly.iso_id
     """
     engine.execute(query)
-    print("HHTS demand created, check database for final table")
+    print(f"{minutes}-minute demand table created, check database for table")
+
+
+def aggregate_demand(iso_minutes_A, iso_minutes_B):
+    """Builds a table that aggregates to and from demand for two sets of isochrones, e.g. 15 and 30 minute isochrones"""
+    query = f"""
+    drop table if exists aggregated_results;
+    create table aggregated_results as(
+        select 
+            tf{iso_minutes_A}.iso_id,
+            tf{iso_minutes_A}.philly_nj_trips_in_driveshed + tf{iso_minutes_A}.nj_philly_trips_in_driveshed as total_trips{iso_minutes_A},
+            tf{iso_minutes_B}.philly_nj_trips_in_driveshed + tf{iso_minutes_B}.nj_philly_trips_in_driveshed as total_trips{iso_minutes_B}
+        from to_from{iso_minutes_A} tf{iso_minutes_A}
+        inner join to_from{iso_minutes_B} tf{iso_minutes_B}
+        on tf{iso_minutes_A}.iso_id = tf{iso_minutes_B}.iso_id)"""
+    engine.execute(query)
+    print(f"To and from demand columns combined...")
 
 
 def calculate_attractions_and_demand_in_isos(minutes):
     """calculates the HHTS demand and the number of attractions for each isochrone_id"""
     query = f"""
-    ALTER table to_from_15_30
+    ALTER table aggregated_results
         DROP column if exists attractions{minutes};
-    ALTER table to_from_15_30
+    ALTER table aggregated_results
         ADD column attractions{minutes} varchar(50);
-    UPDATE to_from_15_30 
+    UPDATE aggregated_results 
     SET attractions{minutes}= subquery.attractions_{minutes}_min
     FROM (SELECT iso_id, count(attractions) as attractions_{minutes}_min
         FROM isochrone_hull{minutes}_minutes 
@@ -260,7 +221,7 @@ def calculate_attractions_and_demand_in_isos(minutes):
             ON st_within(attractions.geometry, isochrone_hull{minutes}_minutes.geom) 
             GROUP BY isochrone_hull{minutes}_minutes.iso_id
             ORDER by iso_id) AS subquery
-    WHERE to_from_15_30.iso_id=subquery.iso_id;
+    WHERE aggregated_results.iso_id=subquery.iso_id;
     """
     print(
         f"calculating number of attractions in each isochrone for the {minutes}-minute shed..."
@@ -273,11 +234,11 @@ def calculate_population_in_isos(minutes):
     """calculates population for isochrone distance (in minutes) and adds new column to master table"""
 
     query = f"""
-    alter table to_from_15_30 
+    alter table aggregated_results 
         DROP column if exists pop{minutes};
-    ALTER table to_from_15_30
+    ALTER table aggregated_results
         ADD column pop{minutes} varchar(50);
-    UPDATE to_from_15_30 
+    UPDATE aggregated_results 
     SET pop{minutes}=subquery.population
     FROM (SELECT ih.iso_id, sum(population) as population 
         FROM taz_pop tp 
@@ -285,7 +246,7 @@ def calculate_population_in_isos(minutes):
             ON st_intersects(ih.geom,tp.geometry)
             GROUP by ih.iso_id
             ORDER by ih.iso_id) AS subquery
-    WHERE to_from_15_30.iso_id=subquery.iso_id;"""
+    WHERE aggregated_results.iso_id=subquery.iso_id;"""
     print(f"calculating total population in the {minutes}-minute shed...")
     engine.execute(query)
 
@@ -293,11 +254,11 @@ def calculate_population_in_isos(minutes):
 def pickup_munis():
     """joins the master table with dvprc municipalities for better identification of points"""
     query = """
-    alter table to_from_15_30 
+    alter table aggregated_results 
     drop column if exists muni;
-    alter table to_from_15_30
+    alter table aggregated_results
     add column muni varchar(50);
-    UPDATE to_from_15_30 
+    UPDATE aggregated_results 
     SET muni=subquery.mun_name
     FROM (select 
         id, dvrpc_munis.mun_name
@@ -306,25 +267,26 @@ def pickup_munis():
         on st_intersects(tp.geometry, dvrpc_munis.geometry)
         group by id, dvrpc_munis.mun_name
         order by id) AS subquery
-    WHERE to_from_15_30.iso_id=subquery.id;"""
+    WHERE aggregated_results.iso_id=subquery.id;"""
     print(f"joining main table to DVRPC municipalities...")
     engine.execute(query)
 
 
 if __name__ == "__main__":
-    # import_points("dock_no_freight.geojson")
-    # import_osmnx(target_network)
-    # import_taz()
-    # import_attractions()
-    # import_dvrpc_munis()
-    # osmnx_to_pg_routing()
-    # neighbor_obj = nearest_node()
-    # make_isochrones(neighbor_obj[0], neighbor_obj[1], 15, 35)
-    # make_isochrones(neighbor_obj[0], neighbor_obj[1], 30, 35)
-    # make_hulls(15)
-    # make_hulls(30)
+    import_points("dock_no_freight.geojson")
+    import_osmnx(target_network)
+    import_taz()
+    import_attractions()
+    import_dvrpc_munis()
+    osmnx_to_pg_routing()
+    neighbor_obj = nearest_node()
+    make_isochrones(neighbor_obj[0], neighbor_obj[1], 15, 35)
+    make_isochrones(neighbor_obj[0], neighbor_obj[1], 30, 35)
+    make_hulls(15)
+    make_hulls(30)
     calculate_taz_demand(15)
     calculate_taz_demand(30)
+    aggregate_demand(15, 30)
     calculate_attractions_and_demand_in_isos(15)
     calculate_attractions_and_demand_in_isos(30)
     calculate_population_in_isos(15)
