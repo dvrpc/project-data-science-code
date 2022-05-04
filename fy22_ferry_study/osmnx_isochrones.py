@@ -247,49 +247,24 @@ def calculate_taz_demand(minutes):
 
 def calculate_attractions_and_demand_in_isos(minutes):
     """calculates the HHTS demand and the number of attractions for each isochrone_id"""
-    # todo: refactor with variables rather than reqpeating slightly different query
-    calculate_taz_demand(minutes)
-    """calculates number of attractions within isochrones. has to be run after previous function."""
-    query = f"""drop table if exists attractions30;
-    create table attractions30 as(
-    select iso_id, count(attractions) as attractions_30_min
+    query = f"""
+    ALTER table to_from_15_30
+        DROP column if exists attractions{minutes};
+    ALTER table to_from_15_30
+        ADD column attractions{minutes} varchar(50);
+    UPDATE to_from_15_30 
+    SET attractions{minutes}= subquery.attractions_{minutes}_min
+    FROM (SELECT iso_id, count(attractions) as attractions_{minutes}_min
         FROM isochrone_hull{minutes}_minutes 
-        LEFT JOIN attractions 
-        ON st_within(attractions.geometry, isochrone_hull{minutes}_minutes.geom) 
-        GROUP BY isochrone_hull{minutes}_minutes.iso_id
-        order by iso_id);
-    drop table if exists attractions15;
-    create table attractions15 as(
-        select iso_id, count(attractions) as attractions_15_min
-        FROM isochrone_hull{minutes}_minutes
-        LEFT JOIN attractions 
-        ON st_within(attractions.geometry, isochrone_hull{minutes}_minutes.geom) 
-        GROUP BY isochrone_hull{minutes}_minutes.iso_id
-        order by iso_id);
-    select * from attractions15
-    inner join attractions30 
-    on attractions15.iso_id = attractions30.iso_id;
-    drop table if exists attractions_in_isochrones;
-    create table attractions_in_isochrones as(
-        select attractions15.iso_id, attractions15.attractions_15_min, attractions30.attractions_30_min
-        from attractions15
-        inner join attractions30
-        on attractions15.iso_id = attractions30.iso_id);
-    drop table if exists attractions15;
-    drop table if exists attractions30;
-    alter table to_from_15_30
-        add column attractions15 varchar(50);
-    alter table to_from_15_30
-        add column attractions30 varchar(50);
-    update to_from_15_30 
-    set attractions15 = attractions_in_isochrones.attractions_15_min 
-    from attractions_in_isochrones
-    where attractions_in_isochrones.iso_id=to_from_15_30.iso_id;
-    update to_from_15_30 
-    set attractions30 = attractions_in_isochrones.attractions_30_min 
-    from attractions_in_isochrones
-    where attractions_in_isochrones.iso_id=to_from_15_30.iso_id;"""
-    print("calculating number of attractions in each isochrone...")
+            LEFT JOIN attractions 
+            ON st_within(attractions.geometry, isochrone_hull{minutes}_minutes.geom) 
+            GROUP BY isochrone_hull{minutes}_minutes.iso_id
+            ORDER by iso_id) AS subquery
+    WHERE to_from_15_30.iso_id=subquery.iso_id;
+    """
+    print(
+        f"calculating number of attractions in each isochrone for the {minutes}-minute shed..."
+    )
     engine.execute(query)
 
 
@@ -297,17 +272,19 @@ def calculate_population_in_isos(minutes):
 
     """calculates population for isochrone distance (in minutes) and adds new column to master table"""
 
-    query = f"""alter table to_from_15_30 
-    drop column if exists pop{minutes};
-    alter table to_from_15_30
-    add column pop{minutes} varchar(50);
+    query = f"""
+    alter table to_from_15_30 
+        DROP column if exists pop{minutes};
+    ALTER table to_from_15_30
+        ADD column pop{minutes} varchar(50);
     UPDATE to_from_15_30 
     SET pop{minutes}=subquery.population
-    FROM (select ih.iso_id, sum(population) as population from taz_pop tp 
-        inner join isochrone_hull{minutes}_minutes ih 
-        on st_intersects(ih.geom,tp.geometry)
-        group by ih.iso_id
-        order by ih.iso_id) AS subquery
+    FROM (SELECT ih.iso_id, sum(population) as population 
+        FROM taz_pop tp 
+            INNER join isochrone_hull{minutes}_minutes ih 
+            ON st_intersects(ih.geom,tp.geometry)
+            GROUP by ih.iso_id
+            ORDER by ih.iso_id) AS subquery
     WHERE to_from_15_30.iso_id=subquery.iso_id;"""
     print(f"calculating total population in the {minutes}-minute shed...")
     engine.execute(query)
@@ -346,6 +323,8 @@ if __name__ == "__main__":
     # make_isochrones(neighbor_obj[0], neighbor_obj[1], 30, 35)
     # make_hulls(15)
     # make_hulls(30)
+    calculate_taz_demand(15)
+    calculate_taz_demand(30)
     calculate_attractions_and_demand_in_isos(15)
     calculate_attractions_and_demand_in_isos(30)
     calculate_population_in_isos(15)
