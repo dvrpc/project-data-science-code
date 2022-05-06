@@ -35,6 +35,7 @@ def import_points(points):
 def import_taz():
     """imports 2010 taz data into db"""
     path = "/Volumes/GoogleDrive/Shared drives/FY22 Regional Rail Fare Equity/Code/Data/Inputs/Zonal Data/2010_taz.shp"
+    path = os.path.normcase(path)
     gdf = gpd.read_file(path)
     print("Importing 2010 TAZ geometries into database...")
     gdf = gdf.rename(columns=str.lower)
@@ -45,6 +46,7 @@ def import_taz():
 def import_population():
     """imports taz population data from g drive"""
     zipfile = "/Volumes/GoogleDrive/Shared drives/Community & Economic Development /Ferry Service Feasibility_FY22/Shapefiles/CTPP2012_2016_total_pop_taz.zip"
+    zipfile = os.path.normcase(zipfile)
     gdf = gpd.read_file(zipfile)
     gdf.rename(
         columns={"F0": "population", "F1": "moe", "name": "taz_name"}, inplace=True
@@ -57,6 +59,7 @@ def import_population():
 def import_hts_trip():
     """imports trip table from HTS data, creates philly and nj specific demand tables for non-work recreational trips"""
     path = "/Volumes/GoogleDrive/Shared drives/Community & Economic Development /Ferry Service Feasibility_FY22/HHTS/PublicDB_RELEASE/DVRPC HTS Database Files/4_Trip_Public.xlsx"
+    path = os.path.normcase(path)
     df = pd.read_excel(path)
     print("Importing HTS trips data...")
     df = df.rename(columns=str.lower)
