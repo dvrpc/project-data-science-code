@@ -34,9 +34,10 @@ def import_points(points):
 
 def import_taz():
     """imports 2010 taz data into db"""
-    path = "/Volumes/GoogleDrive/Shared drives/FY22 Regional Rail Fare Equity/Code/Data/Inputs/Zonal Data/2010_TAZ.shp"
+    path = "/Volumes/GoogleDrive/Shared drives/FY22 Regional Rail Fare Equity/Code/Data/Inputs/Zonal Data/2010_taz.shp"
     gdf = gpd.read_file(path)
-    print("importing 2010 TAZ geometries into database")
+    print("Importing 2010 TAZ geometries into database...")
+    gdf = gdf.rename(columns=str.lower)
     gdf = gdf.to_crs(f"EPSG:{srid}")
     gdf.to_postgis("2010_taz", engine, schema=None, if_exists="replace")
 
@@ -54,11 +55,38 @@ def import_population():
 
 
 def import_hts_trip():
-    """imports trip table from HTS data"""
+    """imports trip table from HTS data, creates philly and nj specific demand tables for non-work recreational trips"""
     path = "/Volumes/GoogleDrive/Shared drives/Community & Economic Development /Ferry Service Feasibility_FY22/HHTS/PublicDB_RELEASE/DVRPC HTS Database Files/4_Trip_Public.xlsx"
     df = pd.read_excel(path)
     print("Importing HTS trips data...")
+    df = df.rename(columns=str.lower)
     df.to_sql("trips", engine, if_exists="replace")
+    query = """
+    drop table if exists philly_nj_rec_trips;
+    create table philly_nj_rec_trips as (
+        select shapes.geometry as geom, sum(compositeweight) from trips 
+        left join "2010_taz" as shapes
+        on shapes.taz=trips.d_taz 
+        where o_county = 42101
+            and d_state = 34 
+            and d_loc_type = 4
+        group by geom
+        order by geom);
+        drop table if exists nj_philly_rec_trips;
+        create table nj_philly_rec_trips as (
+            select shapes.geometry as geom, sum(compositeweight) from trips
+            left join "2010_taz" as shapes
+            on shapes.taz=trips.o_taz 
+            where d_county = 42101
+                and d_taz in (2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143)
+                and d_loc_type = 4
+            group by geom
+            order by geom);
+        """
+    print(
+        "Creating tables for non-work recreational demand to and from Philadelphia and NJ Counties in DVRPC Region..."
+    )
+    engine.execute(query)
 
 
 def import_dvrpc_munis():
@@ -312,4 +340,3 @@ if __name__ == "__main__":
     # pickup_munis()
 
     # todo: do we need "len_feet" column? is it useful/used anywhere, if not, should be deleted as it's confusing since units are dynamic now
-    # todo: add taz automation, insertion of philly_nj and nj_philly tables
