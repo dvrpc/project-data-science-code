@@ -33,6 +33,15 @@ def import_points(points):
 
 
 def import_taz():
+    """imports 2010 taz data into db"""
+    path = "/Volumes/GoogleDrive/Shared drives/FY22 Regional Rail Fare Equity/Code/Data/Inputs/Zonal Data/2010_TAZ.shp"
+    gdf = gpd.read_file(path)
+    print("importing 2010 TAZ geometries into database")
+    gdf = gdf.to_crs(f"EPSG:{srid}")
+    gdf.to_postgis("2010_taz", engine, schema=None, if_exists="replace")
+
+
+def import_population():
     """imports taz population data from g drive"""
     zipfile = "/Volumes/GoogleDrive/Shared drives/Community & Economic Development /Ferry Service Feasibility_FY22/Shapefiles/CTPP2012_2016_total_pop_taz.zip"
     gdf = gpd.read_file(zipfile)
@@ -161,7 +170,6 @@ def make_hulls(minutes):
 
 
 def calculate_taz_demand(minutes):
-    # ripe for refactoring, variablize isohulls
     """uses drive time isochrones to calculate taz demand for an isochrone of a given timeframe"""
     query = f"""drop table if exists to_from{minutes};
     create table to_from{minutes} as
@@ -273,25 +281,26 @@ def pickup_munis():
 
 
 if __name__ == "__main__":
-    import_points("dock_no_freight.geojson")
-    import_osmnx(target_network)
+    # import_points("dock_no_freight.geojson")
+    # import_osmnx(target_network)
+    # import_population()
     import_taz()
-    import_attractions()
-    import_dvrpc_munis()
-    osmnx_to_pg_routing()
-    neighbor_obj = nearest_node()
-    make_isochrones(neighbor_obj[0], neighbor_obj[1], 15, 35)
-    make_isochrones(neighbor_obj[0], neighbor_obj[1], 30, 35)
-    make_hulls(15)
-    make_hulls(30)
-    calculate_taz_demand(15)
-    calculate_taz_demand(30)
-    aggregate_demand(15, 30)
-    calculate_attractions_and_demand_in_isos(15)
-    calculate_attractions_and_demand_in_isos(30)
-    calculate_population_in_isos(15)
-    calculate_population_in_isos(30)
-    pickup_munis()
+    # import_attractions()
+    # import_dvrpc_munis()
+    # osmnx_to_pg_routing()
+    # neighbor_obj = nearest_node()
+    # make_isochrones(neighbor_obj[0], neighbor_obj[1], 15, 35)
+    # make_isochrones(neighbor_obj[0], neighbor_obj[1], 30, 35)
+    # make_hulls(15)
+    # make_hulls(30)
+    # calculate_taz_demand(15)
+    # calculate_taz_demand(30)
+    # aggregate_demand(15, 30)
+    # calculate_attractions_and_demand_in_isos(15)
+    # calculate_attractions_and_demand_in_isos(30)
+    # calculate_population_in_isos(15)
+    # calculate_population_in_isos(30)
+    # pickup_munis()
 
     # todo: do we need "len_feet" column? is it useful/used anywhere, if not, should be deleted as it's confusing since units are dynamic now
     # todo: add taz automation, insertion of philly_nj and nj_philly tables
