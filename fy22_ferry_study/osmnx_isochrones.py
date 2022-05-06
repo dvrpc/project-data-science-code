@@ -53,6 +53,14 @@ def import_population():
     gdf.to_postgis("taz_pop", engine, schema=None, if_exists="replace")
 
 
+def import_hts_trip():
+    """imports trip table from HTS data"""
+    path = "/Volumes/GoogleDrive/Shared drives/Community & Economic Development /Ferry Service Feasibility_FY22/HHTS/PublicDB_RELEASE/DVRPC HTS Database Files/4_Trip_Public.xlsx"
+    df = pd.read_excel(path)
+    print("Importing HTS trips data...")
+    df.to_sql("trips", engine, if_exists="replace")
+
+
 def import_dvrpc_munis():
     """imports dvrpc municipalities"""
     url = "https://arcgis.dvrpc.org/portal/rest/services/Boundaries/MunicipalBoundaries/FeatureServer/0/query?where=dvrpc_reg%20%3D%20'Yes'&outFields=*&outSR=4326&f=json"
@@ -284,7 +292,8 @@ if __name__ == "__main__":
     # import_points("dock_no_freight.geojson")
     # import_osmnx(target_network)
     # import_population()
-    import_taz()
+    # import_taz()
+    import_hts_trip()
     # import_attractions()
     # import_dvrpc_munis()
     # osmnx_to_pg_routing()
