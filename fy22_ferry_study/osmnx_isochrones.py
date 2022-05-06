@@ -49,7 +49,7 @@ def import_population():
     gdf.rename(
         columns={"F0": "population", "F1": "moe", "name": "taz_name"}, inplace=True
     )
-    print("importing taz polygons with population into database...")
+    print("Importing TAZ polygons with population data from the CTPP into database...")
     gdf = gdf.to_crs(f"EPSG:{srid}")
     gdf.to_postgis("taz_pop", engine, schema=None, if_exists="replace")
 
@@ -64,7 +64,7 @@ def import_hts_trip():
     query = """
     drop table if exists philly_nj_rec_trips;
     create table philly_nj_rec_trips as (
-        select shapes.geometry as geom, sum(compositeweight) from trips 
+        select shapes.geometry as geom, sum(compositeweight) as trips from trips 
         left join "2010_taz" as shapes
         on shapes.taz=trips.d_taz 
         where o_county = 42101
@@ -74,7 +74,7 @@ def import_hts_trip():
         order by geom);
         drop table if exists nj_philly_rec_trips;
         create table nj_philly_rec_trips as (
-            select shapes.geometry as geom, sum(compositeweight) from trips
+            select shapes.geometry as geom, sum(compositeweight) as trips from trips
             left join "2010_taz" as shapes
             on shapes.taz=trips.o_taz 
             where d_county = 42101
@@ -93,14 +93,14 @@ def import_dvrpc_munis():
     """imports dvrpc municipalities"""
     url = "https://arcgis.dvrpc.org/portal/rest/services/Boundaries/MunicipalBoundaries/FeatureServer/0/query?where=dvrpc_reg%20%3D%20'Yes'&outFields=*&outSR=4326&f=json"
     gdf = gpd.read_file(url)
-    print("importing dvrpc municipal boundaries into database...")
+    print("Importing dvrpc municipal boundaries into database...")
     gdf = gdf.to_crs(f"EPSG:{srid}")
     gdf.to_postgis("dvrpc_munis", engine, schema=None, if_exists="replace")
 
 
 def import_attractions():
     """imports attraction data"""
-    print("importing attractions points into database...")
+    print("Importing attractions points into database...")
     gdf = gpd.read_file(f"{GEOJSON_FOLDER}/attractions.geojson")
     gdf = gdf.to_crs(f"EPSG:{srid}")
     gdf.to_postgis("attractions", engine, schema=None, if_exists="replace")
@@ -193,12 +193,12 @@ def make_isochrones(neighbors, list_of_ids, minutes, speed_mph):
 
 def make_hulls(minutes):
     hull_query = f"""
-    drop table if exists isochrone_hull{minutes}_minutes_minutes;
-    create table isochrone_hull{minutes}_minutes_minutes as(
+    drop table if exists isochrone_hull{minutes}_minutes;
+    create table isochrone_hull{minutes}_minutes as(
         select iso_id, ST_ConcaveHull(ST_Union(geom), 0.80) as geom from isochrones{minutes}_minutes
         group by iso_id
         );
-    select UpdateGeometrySRID('isochrone_hull{minutes}_minutes_minutes','geom',{srid});
+    select UpdateGeometrySRID('isochrone_hull{minutes}_minutes','geom',{srid});
     """
     print(f"Creating convex hulls around {minutes}-minute isochrones, just a moment...")
     engine.execute(hull_query)
@@ -274,9 +274,7 @@ def calculate_attractions_and_demand_in_isos(minutes):
 
 
 def calculate_population_in_isos(minutes):
-
     """calculates population for isochrone distance (in minutes) and adds new column to master table"""
-
     query = f"""
     alter table aggregated_results 
         DROP column if exists pop{minutes};
@@ -316,27 +314,38 @@ def pickup_munis():
     engine.execute(query)
 
 
-if __name__ == "__main__":
-    # import_points("dock_no_freight.geojson")
-    # import_osmnx(target_network)
-    # import_population()
-    # import_taz()
+def import_all():
+    import_points("dock_no_freight.geojson")
+    import_osmnx(target_network)
+    import_population()
+    import_taz()
     import_hts_trip()
-    # import_attractions()
-    # import_dvrpc_munis()
-    # osmnx_to_pg_routing()
-    # neighbor_obj = nearest_node()
-    # make_isochrones(neighbor_obj[0], neighbor_obj[1], 15, 35)
-    # make_isochrones(neighbor_obj[0], neighbor_obj[1], 30, 35)
-    # make_hulls(15)
-    # make_hulls(30)
-    # calculate_taz_demand(15)
-    # calculate_taz_demand(30)
-    # aggregate_demand(15, 30)
-    # calculate_attractions_and_demand_in_isos(15)
-    # calculate_attractions_and_demand_in_isos(30)
-    # calculate_population_in_isos(15)
-    # calculate_population_in_isos(30)
-    # pickup_munis()
+    import_attractions()
+    import_dvrpc_munis()
 
-    # todo: do we need "len_feet" column? is it useful/used anywhere, if not, should be deleted as it's confusing since units are dynamic now
+
+def build_network_and_isochrones(isochrone_minutes_1, isochrone_minutes_2, speed):
+    osmnx_to_pg_routing()
+    neighbor_obj = nearest_node()
+    make_isochrones(neighbor_obj[0], neighbor_obj[1], isochrone_minutes_1, speed)
+    make_isochrones(neighbor_obj[0], neighbor_obj[1], isochrone_minutes_2, speed)
+    make_hulls(isochrone_minutes_1)
+    make_hulls(isochrone_minutes_2)
+
+
+def perform_analysis(isochrone1, isochrone2):
+    """Runs all calculations to calculate HTS travel demand, # of attractions in iso-shed, and picks up municipalities from DVRPC layer"""
+    calculate_taz_demand(isochrone1)
+    calculate_taz_demand(isochrone2)
+    aggregate_demand(isochrone1, isochrone2)
+    calculate_attractions_and_demand_in_isos(isochrone1)
+    calculate_attractions_and_demand_in_isos(isochrone2)
+    calculate_population_in_isos(isochrone1)
+    calculate_population_in_isos(isochrone2)
+    pickup_munis()
+
+
+if __name__ == "__main__":
+    import_all()
+    build_network_and_isochrones(15, 30, 35)
+    perform_analysis(15, 30)
