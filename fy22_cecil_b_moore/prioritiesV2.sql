@@ -32,6 +32,12 @@ with unnested (priorities) as (
    select unnest(string_to_array(priorities, ';')) from longform_joined lj)
 select count(*)
 from unnested lj 
+where priorities = 'Less aggressive driving';
+
+with unnested (priorities) as (
+   select unnest(string_to_array(priorities, ';')) from longform_joined lj)
+select count(*)
+from unnested lj 
 where priorities like 'Other%';
 
 
